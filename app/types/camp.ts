@@ -8,15 +8,28 @@ export type EquipmentCategory =
   | 'lighting'
   | 'etc'
 
-/** 멤버가 보유한 장비 */
+/**
+ * 장비.
+ * - 장비 등록(Person.equipments)에서는 보유 수량
+ * - 캠핑 멤버(Member.equipments)에서는 이번 캠핑에 가져갈 수량이며, id는 등록된 장비 id와 같다
+ */
 export interface Equipment {
   id: ID
   name: string
   category: EquipmentCategory
   quantity: number
+  /** 장비를 가진 사람(Person.id) */
   ownerId: ID
 }
 
+/** 장비 등록 화면에서 관리하는 사람. 캠핑마다 다시 입력하지 않도록 캠핑과 별도로 저장한다. */
+export interface Person {
+  id: ID
+  name: string
+  equipments: Equipment[]
+}
+
+/** 캠핑에 참여하는 멤버. id는 Person.id와 같다. */
 export interface Member {
   id: ID
   name: string

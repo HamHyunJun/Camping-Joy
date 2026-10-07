@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const store = useCampStore()
+const gear = useGearStore()
 
 function startNewCamp() {
   const campId = store.createCamp()
@@ -15,6 +16,16 @@ function removeCamp(campId: string, name: string) {
 <template>
   <section>
     <h1 class="page-title">내 캠핑</h1>
+
+    <NuxtLink to="/gear" class="card gear-link">
+      <span>
+        <strong>멤버·장비 등록</strong>
+        <span class="meta">
+          {{ gear.people.length ? `${gear.people.length}명 등록됨` : '캠핑 전에 사람별 장비를 먼저 등록해 두세요' }}
+        </span>
+      </span>
+      <span aria-hidden="true">›</span>
+    </NuxtLink>
 
     <button class="btn btn-primary new-camp" type="button" @click="startNewCamp">
       + 새 캠핑 만들기
@@ -36,6 +47,20 @@ function removeCamp(campId: string, name: string) {
 </template>
 
 <style scoped lang="scss">
+.gear-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  text-decoration: none;
+
+  > span:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+}
+
 .new-camp {
   width: 100%;
   margin-bottom: var(--space-4);

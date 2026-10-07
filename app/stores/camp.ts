@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Camp, ID, Member } from '~/types/camp'
+import type { Camp, Equipment, ID, Member, Person } from '~/types/camp'
 import { createId } from '~/utils/id'
 
 interface CampState {
@@ -68,23 +68,14 @@ export const useCampStore = defineStore('camp', {
       if (this.currentCampId === campId) this.currentCampId = null
     },
 
-    // 멤버
-    addMember(name: string): Member | null {
+    // 멤버 (장비 등록에 있는 사람을 캠핑에 넣는다)
+    addMember(person: Person): Member | null {
       const camp = this.currentCamp
-      const trimmed = name.trim()
-      if (!camp || !trimmed) return null
-      const member: Member = { id: createId(), name: trimmed, equipments: [] }
+      if (!camp || camp.members.some((m) => m.id === person.id)) return null
+      const member: Member = { id: person.id, name: person.name, equipments: [] }
       camp.members.push(member)
       camp.updatedAt = now()
       return member
-    },
-    renameMember(memberId: ID, name: string) {
-      const camp = this.currentCamp
-      const member = camp?.members.find((m) => m.id === memberId)
-      const trimmed = name.trim()
-      if (!camp || !member || !trimmed) return
-      member.name = trimmed
-      camp.updatedAt = now()
     },
     removeMember(memberId: ID) {
       const camp = this.currentCamp
@@ -99,8 +90,41 @@ export const useCampStore = defineStore('camp', {
       }
       camp.updatedAt = now()
     },
+    /** 장비 등록에서 이름을 바꾸면 모든 캠핑의 멤버 이름도 맞춘다. */
+    syncMemberName(personId: ID, name: string) {
+      for (const camp of this.camps) {
+        const member = camp.members.find((m) => m.id === personId)
+        if (member) member.name = name
+      }
+    },
 
-    // 장비는 3단계, 배분은 4단계 이후에 추가한다.
+    // 멤버가 이번 캠핑에 가져갈 장비
+    /** 보유 장비 하나를 가져갈 장비에 1개 더한다. 보유 수량을 넘지 않는다. */
+    addMemberEquipment(memberId: ID, owned: Equipment) {
+      const camp = this.currentCamp
+      const member = camp?.members.find((m) => m.id === memberId)
+      if (!camp || !member) return
+      const bringing = member.equipments.find((e) => e.id === owned.id)
+      if (bringing) {
+        if (bringing.quantity >= owned.quantity) return
+        bringing.quantity += 1
+      } else {
+        member.equipments.push({ ...owned, quantity: 1 })
+      }
+      camp.updatedAt = now()
+    },
+    /** 가져갈 장비에서 1개 뺀다. 0개가 되면 목록에서 지운다. */
+    removeMemberEquipment(memberId: ID, equipmentId: ID) {
+      const camp = this.currentCamp
+      const member = camp?.members.find((m) => m.id === memberId)
+      const bringing = member?.equipments.find((e) => e.id === equipmentId)
+      if (!camp || !member || !bringing) return
+      bringing.quantity -= 1
+      if (bringing.quantity < 1) member.equipments = member.equipments.filter((e) => e.id !== equipmentId)
+      camp.updatedAt = now()
+    },
+
+    // 배분은 4단계 이후에 추가한다.
   },
   persist: true,
 })

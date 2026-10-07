@@ -1,62 +1,56 @@
 <script setup lang="ts">
-import type { ID, Member } from '~/types/camp'
+import type { Member, Person } from '~/types/camp'
 
 const store = useCampStore()
+const gear = useGearStore()
 const route = useRoute()
 
 const members = computed(() => store.currentCamp?.members ?? [])
+/** 등록은 되어 있지만 아직 이 캠핑에 없는 사람 */
+const candidates = computed(() =>
+  gear.people.filter((p) => !members.value.some((m) => m.id === p.id)),
+)
 
 const newName = ref('')
 const addError = ref('')
 
-const editingId = ref<ID | null>(null)
-const editingName = ref('')
-
-function isDuplicateName(name: string, exceptId?: ID): boolean {
-  const target = name.trim()
-  return members.value.some((m) => m.id !== exceptId && m.name === target)
+function addPerson(person: Person) {
+  store.addMember(person)
 }
 
-function add() {
+function addByName() {
   const name = newName.value.trim()
   if (!name) return
-  if (isDuplicateName(name)) {
-    addError.value = '이미 같은 이름의 멤버가 있어요.'
+  if (members.value.some((m) => m.name === name)) {
+    addError.value = '이미 추가된 멤버예요.'
     return
   }
-  store.addMember(name)
+  // 처음 보는 이름이면 장비 등록에도 사람을 만들어 다음 캠핑에서 다시 쓸 수 있게 한다.
+  const person = gear.findPersonByName(name) ?? gear.addPerson(name)
+  if (person) store.addMember(person)
   newName.value = ''
   addError.value = ''
 }
 
-function startEdit(member: Member) {
-  editingId.value = member.id
-  editingName.value = member.name
-}
-
-function saveEdit() {
-  const id = editingId.value
-  if (!id) return
-  const name = editingName.value.trim()
-  if (name && !isDuplicateName(name, id)) store.renameMember(id, name)
-  editingId.value = null
-}
-
 function remove(member: Member) {
   const message = member.equipments.length
-    ? `${member.name}님과 등록된 장비 ${member.equipments.length}개를 삭제할까요?`
-    : `${member.name}님을 삭제할까요?`
+    ? `${member.name}님과 이번 캠핑에 넣은 장비를 빼시겠어요?`
+    : `${member.name}님을 이번 캠핑에서 빼시겠어요?`
   if (!confirm(message)) return
   store.removeMember(member.id)
+}
+
+function bringingCount(member: Member): number {
+  return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
 }
 </script>
 
 <template>
   <section>
-    <h1 class="page-title">멤버 관리</h1>
-    <p class="page-desc">함께 캠핑 가는 사람을 추가해 주세요.</p>
+    <h1 class="page-title">멤버</h1>
+    <p class="page-desc">함께 가는 사람의 이름을 넣어 주세요. 등록해 둔 사람이면 장비를 불러옵니다.</p>
 
-    <form class="add-form" @submit.prevent="add">
+    <form class="add-form" @submit.prevent="addByName">
       <input
         v-model="newName"
         class="input"
@@ -64,24 +58,30 @@ function remove(member: Member) {
         placeholder="이름"
         maxlength="20"
         autocomplete="off"
+        list="registered-people"
         @input="addError = ''"
       />
+      <datalist id="registered-people">
+        <option v-for="person in candidates" :key="person.id" :value="person.name" />
+      </datalist>
       <button class="btn btn-primary" type="submit" :disabled="!newName.trim()">추가</button>
     </form>
     <p v-if="addError" class="field-error">{{ addError }}</p>
 
+    <div v-if="candidates.length" class="candidates">
+      <span class="candidates-label">등록된 사람</span>
+      <button v-for="person in candidates" :key="person.id" class="chip" type="button" @click="addPerson(person)">
+        + {{ person.name }}
+        <small>장비 {{ person.equipments.length }}</small>
+      </button>
+    </div>
+
     <ul v-if="members.length" class="member-list card">
       <li v-for="member in members" :key="member.id" class="member-item">
-        <form v-if="editingId === member.id" class="edit-form" @submit.prevent="saveEdit">
-          <input v-model="editingName" class="input" type="text" maxlength="20" autofocus />
-          <button class="btn" type="submit">저장</button>
-        </form>
-        <template v-else>
-          <span class="avatar">{{ member.name.slice(0, 1) }}</span>
-          <span class="name">{{ member.name }}</span>
-          <button class="btn btn-text" type="button" @click="startEdit(member)">수정</button>
-          <button class="btn btn-text btn-danger" type="button" @click="remove(member)">삭제</button>
-        </template>
+        <span class="avatar">{{ member.name.slice(0, 1) }}</span>
+        <span class="name">{{ member.name }}</span>
+        <span class="count">가져갈 장비 {{ bringingCount(member) }}개</span>
+        <button class="btn btn-text btn-danger" type="button" @click="remove(member)">빼기</button>
       </li>
     </ul>
     <p v-else class="empty">아직 멤버가 없어요.</p>
@@ -89,26 +89,49 @@ function remove(member: Member) {
     <div class="page-actions">
       <NuxtLink class="btn" :to="`/camps/${route.params.campId}/info`">이전</NuxtLink>
       <NuxtLink v-if="members.length" class="btn btn-primary" :to="`/camps/${route.params.campId}/equipments`">
-        다음: 장비 등록
+        다음: 장비 넣기
       </NuxtLink>
-      <button v-else class="btn btn-primary" type="button" disabled>다음: 장비 등록</button>
+      <button v-else class="btn btn-primary" type="button" disabled>다음: 장비 넣기</button>
     </div>
   </section>
 </template>
 
 <style scoped lang="scss">
-.add-form,
-.edit-form {
+.add-form {
   display: flex;
   gap: var(--space-2);
-}
-
-.add-form {
   margin-bottom: var(--space-2);
 }
 
-.edit-form {
-  flex: 1;
+.candidates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.candidates-label {
+  width: 100%;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chip {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+
+  small {
+    margin-left: 2px;
+    color: var(--color-text-muted);
+  }
 }
 
 .member-list {
@@ -147,5 +170,10 @@ function remove(member: Member) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.count {
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 </style>

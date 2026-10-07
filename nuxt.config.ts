@@ -9,13 +9,10 @@ export default defineNuxtConfig({
   },
   // 캠핑 링크 공유용 Supabase. 비어 있으면 공유 없이 기기에만 저장한다.
   // Vercel 환경 변수 NUXT_PUBLIC_SUPABASE_URL, NUXT_PUBLIC_SUPABASE_KEY(anon/publishable 키)로 채운다.
-  // 앱(Capacitor)은 빌드할 때 이 환경 변수를 넣어야 공유를 쓸 수 있다.
   runtimeConfig: {
     public: {
       supabaseUrl: '',
       supabaseKey: '',
-      // 앱에서 만든 캠핑 링크가 가리킬 웹 주소
-      siteUrl: 'https://camping-joy.vercel.app',
     },
   },
   css: ['~/assets/scss/main.scss'],

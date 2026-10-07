@@ -73,8 +73,6 @@ export interface Camp {
   assignments: Assignment[]
   /** 준비 완료로 체크한 담당 장비. `${memberId}:${equipmentId}` 형식 (이전에 저장된 캠핑에는 없을 수 있음) */
   readyItems?: string[]
-  /** 캠핑 링크로 공유했을 때 서버 정보 (공유 전에는 없음) */
-  remote?: RemoteCamp
   createdAt: string
   updatedAt: string
 }
@@ -85,47 +83,3 @@ export type AssignmentIssue =
   | { type: 'overloaded'; memberId: ID; count: number }
   | { type: 'duplicated'; requiredEquipmentId: ID }
   | { type: 'missing'; requiredEquipmentId: ID }
-
-/** 서버에 올린 캠핑. id는 Camp.id와 같다. */
-export interface RemoteCamp {
-  token: string
-  syncedAt: string
-}
-
-/** 링크로 연 캠핑을 이 기기에 기억해 두는 항목 (홈 '공유받은 캠핑') */
-export interface JoinedCamp {
-  token: string
-  name: string
-  date: string
-  /** 이 기기에서 고른 멤버 이름 */
-  memberName?: string
-  openedAt: string
-}
-
-/** 링크로 연 캠핑 화면에 보여줄 서버 데이터 */
-export interface SharedCamp {
-  id: ID
-  name: string
-  date: string
-  isOwner: boolean
-  members: SharedMember[]
-}
-
-export interface SharedMember {
-  id: ID
-  name: string
-  /** 다른 기기가 이미 고른 멤버인지 */
-  claimed: boolean
-  /** 이 기기가 고른 멤버인지 */
-  mine: boolean
-  items: SharedItem[]
-}
-
-export interface SharedItem {
-  id: ID
-  name: string
-  category: EquipmentCategory
-  size?: string
-  quantity: number
-  ready: boolean
-}

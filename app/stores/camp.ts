@@ -1,12 +1,10 @@
 import { defineStore } from 'pinia'
-import type { Camp, Equipment, ID, JoinedCamp, Member, Person } from '~/types/camp'
+import type { Camp, Equipment, ID, Member, Person } from '~/types/camp'
 import { createId } from '~/utils/id'
 
 interface CampState {
   camps: Camp[]
   currentCampId: ID | null
-  /** 다른 사람이 공유한 링크로 연 캠핑 */
-  joinedCamps: JoinedCamp[]
 }
 
 export interface CampInfoInput {
@@ -32,7 +30,6 @@ export const useCampStore = defineStore('camp', {
   state: (): CampState => ({
     camps: [],
     currentCampId: null,
-    joinedCamps: [],
   }),
   getters: {
     currentCamp: (state): Camp | null =>
@@ -79,24 +76,6 @@ export const useCampStore = defineStore('camp', {
     deleteCamp(campId: ID) {
       this.camps = this.camps.filter((camp) => camp.id !== campId)
       if (this.currentCampId === campId) this.currentCampId = null
-    },
-
-    // 캠핑 링크 공유
-    /** 서버에 올렸다고 기록한다. 이후 이 캠핑이 바뀌면 자동으로 다시 올린다. */
-    setRemote(campId: ID, token: string) {
-      const camp = this.camps.find((c) => c.id === campId)
-      if (camp) camp.remote = { token, syncedAt: now() }
-    },
-    /** 링크로 연 캠핑을 기억한다(최근에 연 것이 위로). */
-    rememberJoined(entry: Omit<JoinedCamp, 'openedAt'>) {
-      const previous = this.joinedCamps.find((c) => c.token === entry.token)
-      this.joinedCamps = [
-        { ...previous, ...entry, openedAt: now() },
-        ...this.joinedCamps.filter((c) => c.token !== entry.token),
-      ]
-    },
-    forgetJoined(token: string) {
-      this.joinedCamps = this.joinedCamps.filter((c) => c.token !== token)
     },
 
     // 멤버 (장비 등록에 있는 사람을 캠핑에 넣는다)

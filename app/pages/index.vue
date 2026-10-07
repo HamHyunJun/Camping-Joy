@@ -20,18 +20,9 @@ function startNewCamp() {
   navigateTo(`/camps/${campId}/info`)
 }
 
-const sharing = useCampSharing()
-
 function removeCamp(camp: Camp) {
-  const shared = camp.remote ? '\n링크로 공유한 캠핑이라 링크도 더 이상 열리지 않아요.' : ''
-  if (!confirm(`'${camp.name || '이름 없는 캠핑'}'을(를) 삭제할까요?${shared}`)) return
-  if (camp.remote && sharing.enabled) sharing.deleteRemoteCamp(camp.id).catch(() => {})
+  if (!confirm(`'${camp.name || '이름 없는 캠핑'}'을(를) 삭제할까요?`)) return
   store.deleteCamp(camp.id)
-}
-
-function forgetJoined(token: string, name: string) {
-  if (!confirm(`'${name}'을(를) 목록에서 뺄까요? 링크로 다시 열 수 있어요.`)) return
-  store.forgetJoined(token)
 }
 
 function dateParts(date: string): { month: string; day: string } {
@@ -78,9 +69,7 @@ function dateParts(date: string): { month: string; day: string } {
               <strong>{{ camp.name || '이름 없는 캠핑' }}</strong>
               <span v-if="dday" class="dday" :class="{ past: dday === '지난 캠핑' }">{{ dday }}</span>
             </span>
-            <span class="meta">
-              {{ formatDate(camp.date) }} · 멤버 {{ camp.members.length }}명<template v-if="camp.remote"> · 링크 공유 중</template>
-            </span>
+            <span class="meta">{{ formatDate(camp.date) }} · 멤버 {{ camp.members.length }}명</span>
             <span class="status">
               <span class="status-label" :class="{ complete: progress.label === '준비 완료' }">
                 {{ progress.label }}
@@ -103,35 +92,6 @@ function dateParts(date: string): { month: string; day: string } {
       <span>새 캠핑을 만들어 준비를 시작해 보세요.</span>
       <button class="btn btn-primary" type="button" @click="startNewCamp">+ 새 캠핑 만들기</button>
     </div>
-
-    <!-- 다른 사람이 보낸 캠핑 링크로 연 캠핑 -->
-    <template v-if="store.joinedCamps.length">
-      <h2 class="section-title list-title joined-title">공유받은 캠핑 {{ store.joinedCamps.length }}개</h2>
-      <ul class="camp-list">
-        <li v-for="joined in store.joinedCamps" :key="joined.token" class="card camp-item">
-          <NuxtLink :to="`/c/${joined.token}`" class="camp-link">
-            <span class="date-block">
-              <small>{{ dateParts(joined.date).month }}</small>
-              <strong>{{ dateParts(joined.date).day }}</strong>
-            </span>
-            <span class="camp-body">
-              <span class="camp-name">
-                <strong>{{ joined.name }}</strong>
-                <span v-if="formatDday(joined.date)" class="dday" :class="{ past: formatDday(joined.date) === '지난 캠핑' }">
-                  {{ formatDday(joined.date) }}
-                </span>
-              </span>
-              <span class="meta">
-                {{ formatDate(joined.date) }}<template v-if="joined.memberName"> · 나는 {{ joined.memberName }}</template>
-              </span>
-            </span>
-          </NuxtLink>
-          <button class="delete" type="button" :aria-label="`${joined.name} 목록에서 빼기`" @click="forgetJoined(joined.token, joined.name)">
-            <img :src="trashIcon" alt="" width="20" height="20" />
-          </button>
-        </li>
-      </ul>
-    </template>
   </section>
 </template>
 
@@ -182,10 +142,6 @@ function dateParts(date: string): { month: string; day: string } {
 .chevron {
   color: var(--color-text-subtle);
   font-size: 24px;
-}
-
-.joined-title {
-  margin-top: var(--space-8);
 }
 
 .list-title {

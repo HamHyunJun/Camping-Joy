@@ -25,7 +25,7 @@ const menuItems = [
       <header class="header">
         <NuxtLink to="/" class="logo">
           <span class="logo-mark"><img :src="tentIcon" alt="" width="18" height="18" /></span>
-          CampPack
+          Camping&amp;Joy
         </NuxtLink>
         <!-- PC: 헤더에 메뉴 나열 -->
         <nav class="header-nav" aria-label="메뉴">

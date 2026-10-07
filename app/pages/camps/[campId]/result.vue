@@ -9,6 +9,7 @@ const route = useRoute()
 const camp = computed(() => store.currentCamp)
 const members = computed(() => camp.value?.members ?? [])
 const view = ref<'equipment' | 'member'>('equipment')
+const sharing = ref(false)
 
 interface ResultRow {
   key: string
@@ -51,7 +52,12 @@ function memberTotal(member: Member): number {
 
 <template>
   <section v-if="camp">
-    <h1 class="page-title">최종 배분 결과</h1>
+    <div class="page-head">
+      <h1 class="page-title">최종 배분 결과</h1>
+      <button class="btn btn-primary share-button" type="button" :disabled="!rows.length" @click="sharing = true">
+        공유하기
+      </button>
+    </div>
 
     <!-- 캠핑 정보 -->
     <article class="card summary">
@@ -179,10 +185,17 @@ function memberTotal(member: Member): number {
       <NuxtLink class="btn" :to="`/camps/${route.params.campId}/distribute`">이전</NuxtLink>
       <NuxtLink class="btn btn-primary" to="/">내 캠핑으로</NuxtLink>
     </div>
+
+    <ShareSheet v-if="sharing" :camp="camp" @close="sharing = false" />
   </section>
 </template>
 
 <style scoped lang="scss">
+.share-button {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+}
+
 .summary-head {
   display: flex;
   align-items: flex-start;

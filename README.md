@@ -44,3 +44,9 @@ Vercel에서 이 저장소를 Import 하면 Nuxt로 자동 인식돼요(빌드 `
 - APK 받기: GitHub Actions의 "Android APK" 실행 결과에서 `camping-joy-debug-apk`를 내려받아 폰에 설치
 - 직접 빌드: `pnpm android:sync` 후 `pnpm android:open`으로 Android Studio에서 실행
 - 앱 아이콘·스플래시 원본은 `assets/`, 바꾼 뒤 `npx @capacitor/assets generate --android`
+
+## iOS 앱 (Capacitor)
+
+- 빌드 확인: GitHub Actions의 "iOS build"가 서명 없이 시뮬레이터용으로 빌드해요.
+- 아이폰에 설치: Mac에서 `pnpm ios:sync` 후 `pnpm ios:open` → Xcode의 Signing & Capabilities에서 Team(Apple ID)을 고르고 아이폰을 연결해 실행
+- 아이콘·스플래시를 바꾼 뒤 `npx @capacitor/assets generate --ios`

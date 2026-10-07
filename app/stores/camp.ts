@@ -68,6 +68,11 @@ export const useCampStore = defineStore('camp', {
       camp.date = input.date
       camp.updatedAt = now()
     },
+    /** '새 캠핑'만 누르고 정보를 저장하지 않은 빈 캠핑을 지운다. */
+    removeEmptyDrafts() {
+      const empty = this.camps.filter((camp) => !camp.name.trim() && !camp.members.length)
+      for (const camp of empty) this.deleteCamp(camp.id)
+    },
     deleteCamp(campId: ID) {
       this.camps = this.camps.filter((camp) => camp.id !== campId)
       if (this.currentCampId === campId) this.currentCampId = null

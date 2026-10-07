@@ -1,0 +1,41 @@
+# 안드로이드 디버그 APK를 만들어 Actions 아티팩트로 올린다.
+# Android Studio 없이도 실행 결과 페이지에서 APK를 받아 폰에 설치해 볼 수 있다.
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build web and copy into Android project
+        run: pnpm android:sync
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: camping-joy-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk

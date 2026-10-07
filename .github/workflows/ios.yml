@@ -1,0 +1,38 @@
+# iOS 프로젝트가 빌드되는지 macOS에서 확인한다(서명 없이 시뮬레이터용).
+# 실제 아이폰 설치·배포는 Mac의 Xcode에서 Apple 계정으로 서명해야 한다.
+name: iOS build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build web and copy into iOS project
+        run: pnpm ios:sync
+
+      - name: Build for iOS Simulator
+        run: >
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build

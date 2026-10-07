@@ -59,7 +59,8 @@ const overDropZone = ref(false)
 
 function trackPointer(event: DragEvent | MouseEvent | TouchEvent) {
   const point = 'touches' in event ? event.touches[0] : event
-  const rect = dropZone.value?.getBoundingClientRect()
+  // 모바일에서는 덮개가 화면 위쪽에 고정되므로 덮개 자체의 위치로 판단한다.
+  const rect = dropZone.value?.querySelector('.drop-overlay')?.getBoundingClientRect()
   if (!point || !rect) return
   overDropZone.value =
     point.clientX >= rect.left && point.clientX <= rect.right && point.clientY >= rect.top && point.clientY <= rect.bottom
@@ -107,7 +108,7 @@ function reset() {
       <h1 class="page-title">장비 배분</h1>
       <button v-if="shared.length" class="btn btn-text btn-danger" type="button" @click="reset">초기화</button>
     </div>
-    <p class="page-desc">오른쪽에서 이번 캠핑에 챙길 장비를 끌어다 놓거나 + 를 눌러 주세요. 장비는 주인이 챙기고, 멤버별 개수는 왼쪽에 표시돼요.</p>
+    <p class="page-desc">멤버들이 가진 장비를 '공통으로 챙길 장비'로 끌어다 놓거나 + 를 눌러 주세요. 장비는 주인이 챙기고, 멤버별 개수는 멤버 목록에 표시돼요.</p>
 
     <p v-if="!members.length" class="empty">먼저 멤버를 추가해 주세요.</p>
 
@@ -153,14 +154,16 @@ function reset() {
               </ul>
             </div>
           </template>
-          <p v-else class="hint">오른쪽 장비를 여기로 끌어 놓거나 + 를 눌러 주세요.</p>
+          <p v-else class="hint">멤버들이 가진 장비를 여기로 끌어 놓거나 + 를 눌러 주세요.</p>
 
-          <!-- 드래그 중에만 보이는 덮개. 여기에 놓으면 추가된다. -->
+          <!-- 드래그 중에만 보이는 덮개. 여기에 놓으면 추가된다.
+               + 표시와 문구는 항목이 아니라고 알려야(draggable) 덮개 어디에 놓아도 빈 목록처럼 받아 준다. -->
           <VueDraggable
             v-show="dragging"
             :model-value="[]"
             class="drop-overlay"
             :class="{ over: overDropZone }"
+            draggable=".gear-item"
             :group="{ name: dragGroup, pull: false, put: true }"
             :sort="false"
             @update:model-value="onDrop"
@@ -189,6 +192,8 @@ function reset() {
             filter=".is-used-up"
             :delay="150"
             :delay-on-touch-only="true"
+            :force-fallback="true"
+            :fallback-tolerance="3"
             @start="onDragStart"
             @end="onDragEnd"
             @update:model-value="ignore"
@@ -423,6 +428,19 @@ function reset() {
   transition:
     background-color 0.15s,
     border-color 0.15s;
+
+  // 모바일은 보유 장비가 공통 목록 아래에 쌓여 있어, 끌기 시작하면 공통 목록이 화면 밖일 수 있다.
+  // 그래서 덮개를 헤더 바로 아래에 고정해 언제든 놓을 수 있게 한다.
+  @include mobile {
+    position: fixed;
+    top: calc(var(--header-height) + var(--safe-top) + 56px);
+    right: var(--space-4);
+    left: var(--space-4);
+    bottom: auto;
+    z-index: 25;
+    height: 160px;
+    box-shadow: var(--shadow-md);
+  }
 
   // 끌어다 놓는 중 덮개에 들어온 미리보기 항목은 숨긴다.
   :deep(> .gear-item) {

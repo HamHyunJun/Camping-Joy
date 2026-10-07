@@ -36,3 +36,11 @@ app/
 
 Vercel에서 이 저장소를 Import 하면 Nuxt로 자동 인식돼요(빌드 `pnpm build`, 설정 추가 필요 없음).
 `main`에 머지될 때마다 자동으로 다시 배포돼요.
+
+## 안드로이드 앱 (Capacitor)
+
+웹 빌드(`.output/public`)를 앱 안에 넣는 방식이라 인터넷이 약한 곳에서도 열려요.
+
+- APK 받기: GitHub Actions의 "Android APK" 실행 결과에서 `camping-joy-debug-apk`를 내려받아 폰에 설치
+- 직접 빌드: `pnpm android:sync` 후 `pnpm android:open`으로 Android Studio에서 실행
+- 앱 아이콘·스플래시 원본은 `assets/`, 바꾼 뒤 `npx @capacitor/assets generate --android`

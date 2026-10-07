@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { Capacitor } from '@capacitor/core'
+import { Directory, Filesystem } from '@capacitor/filesystem'
+import { Share } from '@capacitor/share'
 import { toBlob } from 'html-to-image'
 import tentIcon from '~/assets/icons/tent.svg'
 import type { Camp } from '~/types/camp'
@@ -17,7 +20,9 @@ const dday = computed(() => formatDday(props.camp.date))
 const fileName = computed(() => `camping-joy-${props.camp.date}`)
 const total = computed(() => props.camp.members.reduce((sum, m) => sum + m.equipments.reduce((s, e) => s + e.quantity, 0), 0))
 
-const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+/** 안드로이드/iOS 앱(웹뷰) 안인지. 웹뷰는 다운로드 링크와 Web Share를 못 쓰므로 앱 공유 창을 쓴다. */
+const native = Capacitor.isNativePlatform()
+const canShare = native || (typeof navigator !== 'undefined' && typeof navigator.share === 'function')
 
 function showToast(message: string) {
   toast.value = message
@@ -43,7 +48,23 @@ function download(blob: Blob, name: string) {
 
 /** 공유 창을 닫은 경우는 실패가 아니다. */
 function isAbort(error: unknown): boolean {
-  return error instanceof DOMException && error.name === 'AbortError'
+  if (error instanceof DOMException) return error.name === 'AbortError'
+  return error instanceof Error && /cancel/i.test(error.message)
+}
+
+function toBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '')
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(blob)
+  })
+}
+
+/** 앱에서는 이미지를 캐시에 써 두고 휴대폰 공유 창으로 넘긴다. 공유 창에서 저장도 할 수 있다. */
+async function shareFileNative(blob: Blob, name: string) {
+  const { uri } = await Filesystem.writeFile({ path: name, data: await toBase64(blob), directory: Directory.Cache })
+  await Share.share({ files: [uri], title: props.camp.name })
 }
 
 async function saveImage() {
@@ -63,6 +84,10 @@ async function shareImage() {
   try {
     const blob = await makeImage()
     if (!blob) return
+    if (native) {
+      await shareFileNative(blob, `${fileName.value}.png`)
+      return
+    }
     const file = new File([blob], `${fileName.value}.png`, { type: 'image/png' })
     if (navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], title: props.camp.name })
@@ -89,7 +114,8 @@ async function copyText() {
 
 async function shareText() {
   try {
-    await navigator.share({ text: text.value })
+    if (native) await Share.share({ text: text.value })
+    else await navigator.share({ text: text.value })
   } catch (error) {
     if (!isAbort(error)) showToast('공유하지 못했어요.')
   }
@@ -151,11 +177,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
       </div>
 
       <div v-if="mode === 'image'" class="actions">
-        <button class="btn" type="button" :disabled="busy" @click="saveImage">이미지 저장</button>
+        <button v-if="!native" class="btn" type="button" :disabled="busy" @click="saveImage">이미지 저장</button>
         <button v-if="canShare" class="btn btn-primary" type="button" :disabled="busy" @click="shareImage">이미지 공유</button>
       </div>
       <div v-else class="actions">
-        <button class="btn" type="button" @click="saveText">파일 저장</button>
+        <button v-if="!native" class="btn" type="button" @click="saveText">파일 저장</button>
         <button class="btn" :class="{ 'btn-primary': !canShare }" type="button" @click="copyText">복사</button>
         <button v-if="canShare" class="btn btn-primary" type="button" @click="shareText">공유</button>
       </div>

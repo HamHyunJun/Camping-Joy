@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
-import type { Equipment, ID } from '~/types/camp'
+import type { Equipment, ID, Member } from '~/types/camp'
 
 definePageMeta({ wide: true })
 
@@ -9,21 +9,24 @@ const gear = useGearStore()
 const route = useRoute()
 
 const members = computed(() => store.currentCamp?.members ?? [])
-const selectedId = ref<ID | null>(members.value[0]?.id ?? null)
-const selected = computed(() => members.value.find((m) => m.id === selectedId.value) ?? null)
 
-/** 이번 캠핑 멤버들이 등록해 둔 장비 전체. 선택한 멤버의 장비가 먼저 오도록 정렬한다. */
-const pool = computed<Equipment[]>(() => {
-  const all = members.value.flatMap((m) => gear.findPerson(m.id)?.equipments ?? [])
-  return [...all].sort((a, b) => Number(b.ownerId === selectedId.value) - Number(a.ownerId === selectedId.value))
-})
+/** 이번 캠핑 멤버들이 등록해 둔 장비 전체 */
+const pool = computed<Equipment[]>(() => members.value.flatMap((m) => gear.findPerson(m.id)?.equipments ?? []))
 const poolGroups = computed(() => groupByCategory(pool.value))
-const assignedGroups = computed(() => groupByCategory(selected.value?.equipments ?? []))
+
+/** 공통으로 챙길 장비: 모든 멤버의 담당 장비를 한 목록으로 모은다. 장비는 주인이 챙긴다. */
+const shared = computed<Equipment[]>(() => members.value.flatMap((m) => m.equipments))
+const sharedGroups = computed(() => groupByCategory(shared.value))
 
 const dragGroup = 'distribute'
 
 function ownerName(ownerId: ID): string {
   return members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
+}
+
+/** 공통 목록의 항목을 실제로 들고 있는 멤버 */
+function holderOf(item: Equipment): Member | undefined {
+  return members.value.find((m) => m.equipments.includes(item))
 }
 
 function remaining(owned: Equipment): number {
@@ -34,23 +37,24 @@ function ownedOf(equipmentId: ID): Equipment | undefined {
   return pool.value.find((e) => e.id === equipmentId)
 }
 
-function assign(owned: Equipment) {
-  if (selected.value) store.addMemberEquipment(selected.value.id, owned)
+function add(owned: Equipment) {
+  store.addMemberEquipment(owned.ownerId, owned)
 }
 
-function assignAgain(item: Equipment) {
+function addAgain(item: Equipment) {
   const owned = ownedOf(item.id)
-  if (owned) assign(owned)
+  if (owned) add(owned)
 }
 
-function unassign(item: Equipment) {
-  if (selected.value) store.removeMemberEquipment(selected.value.id, item.id)
+function subtract(item: Equipment) {
+  const holder = holderOf(item)
+  if (holder) store.removeMemberEquipment(holder.id, item.id)
 }
 
-/** 보유 장비를 담당 장비 영역에 놓았을 때. 새로 들어온 항목만 찾아 배분한다. */
+/** 보유 장비를 공통 목록에 놓았을 때. 보유 장비에서 온 항목을 찾아 추가한다. */
 function onDrop(list: Equipment[]) {
-  const dropped = list.find((item) => !selected.value?.equipments.includes(item))
-  if (dropped) assign(dropped)
+  const dropped = list.find((item) => pool.value.includes(item))
+  if (dropped) add(dropped)
 }
 
 function assignedCount(memberId: ID): number {
@@ -65,7 +69,7 @@ const ignore = () => {}
 <template>
   <section>
     <h1 class="page-title">장비 배분</h1>
-    <p class="page-desc">멤버를 고르고, 오른쪽 장비를 끌어다 놓거나 + 를 눌러 그 멤버가 챙길 장비를 정해 주세요.</p>
+    <p class="page-desc">오른쪽에서 이번 캠핑에 챙길 장비를 끌어다 놓거나 + 를 눌러 주세요. 장비는 주인이 챙기고, 멤버별 개수는 왼쪽에 표시돼요.</p>
 
     <p v-if="!members.length" class="empty">먼저 멤버를 추가해 주세요.</p>
 
@@ -74,50 +78,42 @@ const ignore = () => {}
       <nav class="panel members-panel" aria-label="멤버">
         <h2 class="panel-title">멤버</h2>
         <ul class="member-list">
-          <li v-for="member in members" :key="member.id">
-            <button
-              type="button"
-              class="member-button"
-              :class="{ active: member.id === selectedId }"
-              @click="selectedId = member.id"
-            >
-              <span class="name">{{ member.name }}</span>
-              <span class="badge">{{ assignedCount(member.id) }}</span>
-            </button>
+          <li v-for="member in members" :key="member.id" class="member-row">
+            <span class="name">{{ member.name }}</span>
+            <span class="badge" :class="{ zero: !assignedCount(member.id) }">{{ assignedCount(member.id) }}</span>
           </li>
         </ul>
       </nav>
 
-      <!-- 선택한 멤버의 담당 장비 -->
+      <!-- 공통으로 챙길 장비 -->
       <section class="panel">
-        <h2 class="panel-title">{{ selected ? `${selected.name}님이 챙길 장비` : '멤버를 골라 주세요' }}</h2>
+        <h2 class="panel-title">공통으로 챙길 장비</h2>
         <VueDraggable
-          v-if="selected"
-          :model-value="selected.equipments"
+          :model-value="shared"
           class="drop-zone"
-          :class="{ empty: !selected.equipments.length }"
+          :class="{ empty: !shared.length }"
           :group="{ name: dragGroup, pull: false, put: true }"
           :sort="false"
           @update:model-value="onDrop"
         >
-          <template v-if="selected.equipments.length">
-            <div v-for="group in assignedGroups" :key="group.category" class="group">
+          <template v-if="shared.length">
+            <div v-for="group in sharedGroups" :key="group.category" class="group">
               <h3 class="group-label">{{ group.label }}</h3>
               <ul class="gear-list">
-                <li v-for="item in group.items" :key="item.id" class="gear-item">
+                <li v-for="item in group.items" :key="`${holderOf(item)?.id}:${item.id}`" class="gear-item">
                   <span class="gear-name">
                     {{ item.name }}
-                    <small v-if="item.ownerId !== selected.id" class="owner">{{ ownerName(item.ownerId) }} 장비</small>
+                    <small class="owner">{{ holderOf(item)?.name }}</small>
                   </span>
                   <div class="stepper">
-                    <button type="button" class="round" aria-label="하나 빼기" @click="unassign(item)">−</button>
+                    <button type="button" class="round" aria-label="하나 빼기" @click="subtract(item)">−</button>
                     <span>{{ item.quantity }}</span>
                     <button
                       type="button"
                       class="round"
                       aria-label="하나 더"
                       :disabled="!ownedOf(item.id) || remaining(ownedOf(item.id)!) < 1"
-                      @click="assignAgain(item)"
+                      @click="addAgain(item)"
                     >
                       +
                     </button>
@@ -154,7 +150,7 @@ const ignore = () => {}
               v-for="item in group.items"
               :key="item.id"
               class="gear-item pool-item"
-              :class="{ 'is-used-up': remaining(item) < 1, mine: item.ownerId === selectedId }"
+              :class="{ 'is-used-up': remaining(item) < 1 }"
             >
               <span class="gear-name">
                 {{ item.name }}
@@ -164,9 +160,9 @@ const ignore = () => {}
               <button
                 type="button"
                 class="round"
-                :disabled="!selected || remaining(item) < 1"
-                aria-label="배분"
-                @click="assign(item)"
+                :disabled="remaining(item) < 1"
+                aria-label="추가"
+                @click="add(item)"
               >
                 +
               </button>
@@ -222,35 +218,19 @@ const ignore = () => {}
   }
 }
 
-.member-button {
+.member-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  width: 100%;
   min-height: 40px;
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
   white-space: nowrap;
-  cursor: pointer;
 
   @media (min-width: 860px) {
     border-radius: 8px;
-  }
-
-  &.active {
-    border-color: var(--color-primary);
-    background: var(--color-primary);
-    color: #fff;
-
-    .badge {
-      background: rgb(255 255 255 / 25%);
-      color: #fff;
-    }
   }
 }
 
@@ -263,6 +243,11 @@ const ignore = () => {}
   font-size: 12px;
   font-weight: 700;
   text-align: center;
+
+  &.zero {
+    background: var(--color-border);
+    color: var(--color-text-muted);
+  }
 }
 
 .group + .group {
@@ -300,10 +285,6 @@ const ignore = () => {}
   border: 1px solid var(--color-border);
   cursor: grab;
   touch-action: pan-y;
-
-  &.mine {
-    border-color: var(--color-primary);
-  }
 
   &.is-used-up {
     opacity: 0.45;

@@ -264,14 +264,11 @@ function memberTotal(member: Member): number {
 }
 
 .chip {
-  padding: 6px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  font-size: 14px;
+  cursor: default;
 
-  small {
-    color: var(--color-text-muted);
+  &:hover {
+    border-color: var(--color-border);
+    color: var(--color-text);
   }
 }
 

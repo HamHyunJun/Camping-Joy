@@ -9,21 +9,30 @@ function canVisit(path: CampStep['path']): boolean {
   return store.currentCamp ? canVisitStep(store.currentCamp, path) : false
 }
 
+function isDone(path: CampStep['path']): boolean {
+  return path !== 'result' && store.currentCamp ? isStepComplete(store.currentCamp, path) : false
+}
+
 const currentIndex = computed(() =>
   CAMP_STEPS.findIndex((step) => route.path.endsWith(`/${step.path}`)),
 )
 </script>
 
 <template>
-  <nav class="step-nav">
+  <nav class="step-nav" aria-label="캠핑 준비 단계">
     <ol>
       <li
         v-for="(step, index) in CAMP_STEPS"
         :key="step.path"
-        :class="{ active: index === currentIndex, done: index < currentIndex, locked: !canVisit(step.path) }"
+        :class="{ active: index === currentIndex, done: isDone(step.path), locked: !canVisit(step.path) }"
       >
-        <NuxtLink v-if="canVisit(step.path)" :to="`/camps/${props.campId}/${step.path}`" class="step">
-          <span class="num">{{ index + 1 }}</span>
+        <NuxtLink
+          v-if="canVisit(step.path)"
+          :to="`/camps/${props.campId}/${step.path}`"
+          class="step"
+          :aria-current="index === currentIndex ? 'step' : undefined"
+        >
+          <span class="num">{{ isDone(step.path) && index !== currentIndex ? '✓' : index + 1 }}</span>
           <span class="label">{{ step.label }}</span>
         </NuxtLink>
         <span v-else class="step" aria-disabled="true" title="앞 단계를 먼저 입력해 주세요">
@@ -37,24 +46,49 @@ const currentIndex = computed(() =>
 
 <style scoped lang="scss">
 .step-nav {
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
   overflow-x: auto;
+  scrollbar-width: none;
 
   ol {
     display: flex;
-    gap: var(--space-2);
+    align-items: center;
     max-width: var(--content-max);
     margin: 0 auto;
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-2) var(--space-4);
     list-style: none;
+  }
+
+  li {
+    display: flex;
+    flex: 1;
+    align-items: center;
+
+    /* 단계 사이 연결선 */
+    &:not(:last-child)::after {
+      content: '';
+      flex: 1;
+      min-width: 12px;
+      height: 2px;
+      margin: 0 var(--space-1);
+      border-radius: 1px;
+      background: var(--color-border);
+    }
+
+    &.done:not(:last-child)::after {
+      background: var(--color-primary);
+    }
+
+    &:last-child {
+      flex: none;
+    }
   }
 
   .step {
     display: flex;
     align-items: center;
-    gap: var(--space-1);
-    padding: var(--space-1) var(--space-3);
+    gap: 6px;
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
     border-radius: 999px;
     color: var(--color-text-muted);
     text-decoration: none;
@@ -62,33 +96,51 @@ const currentIndex = computed(() =>
     font-size: 14px;
   }
 
+  a.step:hover {
+    background: var(--color-surface-muted);
+  }
+
   .num {
     display: inline-grid;
     place-items: center;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    background: var(--color-border);
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
     font-size: 12px;
+    font-weight: 700;
   }
 
   .locked .step {
-    opacity: 0.4;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 
-  .done a {
-    color: var(--color-primary);
-  }
-
-  .active a {
-    background: var(--color-primary-soft);
-    color: var(--color-primary);
-    font-weight: 600;
+  .done .step {
+    color: var(--color-text);
 
     .num {
+      border-color: var(--color-primary);
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+    }
+  }
+
+  .active .step {
+    color: var(--color-primary);
+    font-weight: 700;
+
+    .num {
+      border-color: var(--color-primary);
       background: var(--color-primary);
       color: #fff;
+    }
+  }
+
+  @include mobile {
+    .label {
+      font-size: 13px;
     }
   }
 }

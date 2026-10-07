@@ -43,6 +43,7 @@ export const useGearStore = defineStore('gear', {
     },
     removePerson(personId: ID) {
       this.people = this.people.filter((p) => p.id !== personId)
+      useCampStore().removePersonFromCamps(personId)
     },
 
     addEquipment(personId: ID, input: EquipmentInput): Equipment | null {
@@ -79,19 +80,22 @@ export const useGearStore = defineStore('gear', {
       if (same) {
         same.quantity += equipment.quantity
         person.equipments = person.equipments.filter((e) => e.id !== equipmentId)
+        useCampStore().syncOwnerEquipments(personId, person.equipments, { [equipmentId]: same.id })
         return
       }
       equipment.size = size
+      useCampStore().syncOwnerEquipments(personId, person.equipments)
     },
     setEquipmentQuantity(personId: ID, equipmentId: ID, quantity: number) {
       const person = this.findPerson(personId)
       if (!person) return
       if (quantity < 1) {
         person.equipments = person.equipments.filter((e) => e.id !== equipmentId)
-        return
+      } else {
+        const equipment = person.equipments.find((e) => e.id === equipmentId)
+        if (equipment) equipment.quantity = quantity
       }
-      const equipment = person.equipments.find((e) => e.id === equipmentId)
-      if (equipment) equipment.quantity = quantity
+      useCampStore().syncOwnerEquipments(personId, person.equipments)
     },
   },
   persist: true,

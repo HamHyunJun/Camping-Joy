@@ -3,6 +3,10 @@ export default defineNuxtConfig({
   ssr: false,
   devtools: { enabled: true },
   modules: ['@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
+  // 기본값(쿠키)은 4KB 제한이 있어 캠핑이 쌓이면 저장이 깨진다.
+  piniaPluginPersistedstate: {
+    storage: 'localStorage',
+  },
   css: ['~/assets/scss/main.scss'],
   vite: {
     css: {

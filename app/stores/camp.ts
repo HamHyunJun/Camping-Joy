@@ -103,6 +103,55 @@ export const useCampStore = defineStore('camp', {
       }
     },
 
+    // 멤버·장비 등록이 바뀌었을 때 모든 캠핑 데이터를 맞춘다.
+    /** 이 사람이 멤버로 들어 있는 캠핑 수 */
+    countCampsWithPerson(personId: ID): number {
+      return this.camps.filter((camp) => camp.members.some((m) => m.id === personId)).length
+    },
+    /** 등록에서 사람을 지우면 모든 캠핑에서 멤버와 그 사람의 장비를 뺀다. */
+    removePersonFromCamps(personId: ID) {
+      for (const camp of this.camps) {
+        camp.members = camp.members.filter((m) => m.id !== personId)
+        for (const member of camp.members) {
+          member.equipments = member.equipments.filter((e) => e.ownerId !== personId)
+        }
+        camp.readyItems = camp.readyItems?.filter((key) => !key.startsWith(`${personId}:`))
+      }
+    },
+    /**
+     * 등록에서 한 사람의 장비가 바뀌면(삭제, 수량, 크기) 모든 캠핑의 챙길 장비를 맞춘다.
+     * - 없어진 장비는 빼고, 크기를 합쳐 id가 바뀐 장비는 새 id로 옮긴다.
+     * - 챙길 수량이 보유 수량을 넘으면 보유 수량으로 줄인다.
+     */
+    syncOwnerEquipments(personId: ID, owned: Equipment[], renamedIds: Record<ID, ID> = {}) {
+      for (const camp of this.camps) {
+        for (const member of camp.members) {
+          const next: Equipment[] = []
+          for (const item of member.equipments) {
+            if (item.ownerId !== personId) {
+              next.push(item)
+              continue
+            }
+            const id = renamedIds[item.id] ?? item.id
+            const source = owned.find((e) => e.id === id)
+            if (!source) continue
+            const existing = next.find((e) => e.id === id)
+            if (existing) existing.quantity += item.quantity
+            else next.push({ ...source, quantity: item.quantity })
+          }
+          for (const item of next) {
+            const source = owned.find((e) => e.id === item.id && e.ownerId === personId)
+            if (source) item.quantity = Math.min(item.quantity, source.quantity)
+          }
+          const keptIds = new Set(next.map((e) => e.id))
+          camp.readyItems = camp.readyItems?.filter(
+            (key) => !key.startsWith(`${member.id}:`) || keptIds.has(key.slice(member.id.length + 1)),
+          )
+          member.equipments = next
+        }
+      }
+    },
+
     // 배분: 멤버별 담당 장비 (Member.equipments). 다른 멤버의 장비를 맡을 수도 있고, ownerId로 원래 주인을 안다.
     /** 이 장비가 이번 캠핑에서 이미 몇 개 배분됐는지 (모든 멤버 합계) */
     assignedQuantity(equipmentId: ID): number {

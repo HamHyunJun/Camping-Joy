@@ -29,11 +29,14 @@ const form = reactive<{ name: string; category: EquipmentCategory; quantity: num
 
 /** 크기를 골라야 하는 장비를 눌렀을 때 크기 선택을 연다. */
 const sizingPreset = ref<EquipmentPreset | null>(null)
+/** 텐트처럼 이름을 적을 수 있는 장비를 추가할 때 함께 적는 이름 */
+const sizingModel = ref('')
 const sizingGuide = computed(() => (sizingPreset.value ? sizeGuideOf(sizingPreset.value.name) : undefined))
 
 function addPreset(preset: EquipmentPreset) {
   if (sizeGuideOf(preset.name)) {
     sizingPreset.value = sizingPreset.value?.name === preset.name ? null : preset
+    sizingModel.value = ''
     return
   }
   gear.addEquipment(props.person.id, { ...preset, quantity: 1 })
@@ -41,8 +44,9 @@ function addPreset(preset: EquipmentPreset) {
 
 function addWithSize(size: string) {
   if (!sizingPreset.value) return
-  gear.addEquipment(props.person.id, { ...sizingPreset.value, quantity: 1, size })
+  gear.addEquipment(props.person.id, { ...sizingPreset.value, quantity: 1, size, model: sizingModel.value })
   sizingPreset.value = null
+  sizingModel.value = ''
 }
 
 function addCustom() {
@@ -127,6 +131,16 @@ function removePerson() {
                 <span>{{ item.quantity }}</span>
                 <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
               </div>
+              <input
+                v-if="hasModelName(item.name)"
+                class="input model-input"
+                type="text"
+                maxlength="30"
+                :value="item.model ?? ''"
+                placeholder="텐트명 (예: 코베아 고스트)"
+                aria-label="텐트명"
+                @change="gear.setEquipmentModel(person.id, item.id, ($event.target as HTMLInputElement).value)"
+              />
             </li>
           </ul>
         </section>
@@ -148,6 +162,15 @@ function removePerson() {
 
       <div v-if="sizingPreset && sizingGuide" class="size-picker">
         <!-- 툴팁이 크기 칩을 가리지 않도록, 여기서는 기준을 칩에 바로 적는다. -->
+        <input
+          v-if="hasModelName(sizingPreset.name)"
+          v-model="sizingModel"
+          class="input model-input"
+          type="text"
+          maxlength="30"
+          :placeholder="`${sizingPreset.name}명 (선택, 예: 코베아 고스트)`"
+          :aria-label="`${sizingPreset.name}명`"
+        />
         <div class="size-picker-title">{{ sizingPreset.name }} 크기를 골라 주세요</div>
         <div class="size-options">
           <button v-for="option in sizingGuide.options" :key="option.label" class="chip" type="button" @click="addWithSize(option.label)">
@@ -297,6 +320,7 @@ function removePerson() {
 
 .gear-item {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
@@ -366,6 +390,17 @@ function removePerson() {
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
   background: var(--color-primary-soft);
+}
+
+.model-input {
+  flex-basis: 100%;
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+}
+
+.gear-item .model-input {
+  min-height: 38px;
+  margin: 0 0 var(--space-1);
 }
 
 .size-picker-title {

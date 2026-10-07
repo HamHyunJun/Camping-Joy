@@ -23,6 +23,7 @@ export default defineNuxtPlugin(() => {
         name: e.name.slice(0, 30),
         category: e.category,
         size: e.size?.slice(0, 20) ?? null,
+        model: e.model?.slice(0, 30) ?? null,
         quantity: Math.min(Math.max(e.quantity, 1), 99),
       })),
     )
@@ -58,6 +59,7 @@ export default defineNuxtPlugin(() => {
           category: e.category,
           quantity: e.quantity,
           ...(e.size ? { size: e.size } : {}),
+          ...(e.model ? { model: e.model } : {}),
           ownerId: p.id,
         })),
     }))

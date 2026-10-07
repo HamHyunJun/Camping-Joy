@@ -43,7 +43,7 @@ const menuItems = [
     </nav>
 
     <StepNav v-if="campId" :camp-id="campId" />
-    <main class="content">
+    <main class="content" :class="{ wide: route.meta.wide }">
       <slot />
     </main>
   </div>
@@ -133,5 +133,9 @@ const menuItems = [
   max-width: var(--content-max);
   margin: 0 auto;
   padding: var(--space-4);
+
+  &.wide {
+    max-width: 1120px;
+  }
 }
 </style>

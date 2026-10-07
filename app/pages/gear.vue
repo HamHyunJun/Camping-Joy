@@ -3,6 +3,7 @@ const gear = useGearStore()
 
 const newName = ref('')
 const error = ref('')
+const lastAddedId = ref<string | null>(null)
 
 function addPerson() {
   const name = newName.value.trim()
@@ -11,7 +12,7 @@ function addPerson() {
     error.value = '이미 등록된 이름이에요.'
     return
   }
-  gear.addPerson(name)
+  lastAddedId.value = gear.addPerson(name)?.id ?? null
   newName.value = ''
   error.value = ''
 }
@@ -37,7 +38,12 @@ function addPerson() {
     <p v-if="error" class="field-error">{{ error }}</p>
 
     <div v-if="gear.people.length" class="people">
-      <PersonGearCard v-for="person in gear.people" :key="person.id" :person="person" />
+      <PersonGearCard
+        v-for="person in gear.people"
+        :key="person.id"
+        :person="person"
+        :initially-open="person.id === lastAddedId"
+      />
     </div>
     <p v-else class="empty">아직 등록된 사람이 없어요.</p>
   </section>
@@ -53,7 +59,7 @@ function addPerson() {
 .people {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin-top: var(--space-4);
 }
 </style>

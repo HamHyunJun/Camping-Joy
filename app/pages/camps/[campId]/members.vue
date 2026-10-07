@@ -34,7 +34,7 @@ function addByName() {
 
 function remove(member: Member) {
   const message = member.equipments.length
-    ? `${member.name}님과 이번 캠핑에 넣은 장비를 빼시겠어요?`
+    ? `${member.name}님과 담당으로 정한 장비를 빼시겠어요?`
     : `${member.name}님을 이번 캠핑에서 빼시겠어요?`
   if (!confirm(message)) return
   store.removeMember(member.id)
@@ -80,7 +80,7 @@ function bringingCount(member: Member): number {
       <li v-for="member in members" :key="member.id" class="member-item">
         <span class="avatar">{{ member.name.slice(0, 1) }}</span>
         <span class="name">{{ member.name }}</span>
-        <span class="count">가져갈 장비 {{ bringingCount(member) }}개</span>
+        <span class="count">담당 장비 {{ bringingCount(member) }}개</span>
         <button class="btn btn-text btn-danger" type="button" @click="remove(member)">빼기</button>
       </li>
     </ul>
@@ -88,10 +88,10 @@ function bringingCount(member: Member): number {
 
     <div class="page-actions">
       <NuxtLink class="btn" :to="`/camps/${route.params.campId}/info`">이전</NuxtLink>
-      <NuxtLink v-if="members.length" class="btn btn-primary" :to="`/camps/${route.params.campId}/equipments`">
-        다음: 장비 넣기
+      <NuxtLink v-if="members.length" class="btn btn-primary" :to="`/camps/${route.params.campId}/distribute`">
+        다음: 장비 배분
       </NuxtLink>
-      <button v-else class="btn btn-primary" type="button" disabled>다음: 장비 넣기</button>
+      <button v-else class="btn btn-primary" type="button" disabled>다음: 장비 배분</button>
     </div>
   </section>
 </template>

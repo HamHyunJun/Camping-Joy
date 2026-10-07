@@ -2,11 +2,14 @@
 import type { EquipmentCategory, Person } from '~/types/camp'
 import { EQUIPMENT_CATEGORY_LABELS, EQUIPMENT_PRESETS, type EquipmentPreset } from '~/constants/equipment'
 
-const props = defineProps<{ person: Person }>()
+const props = defineProps<{ person: Person; initiallyOpen?: boolean }>()
 const gear = useGearStore()
 
 const groups = computed(() => groupByCategory(props.person.equipments))
 const categoryOptions = Object.entries(EQUIPMENT_CATEGORY_LABELS) as [EquipmentCategory, string][]
+
+const open = ref(props.initiallyOpen ?? false)
+const totalCount = computed(() => props.person.equipments.reduce((sum, e) => sum + e.quantity, 0))
 
 const editingName = ref<string | null>(null)
 const form = reactive<{ name: string; category: EquipmentCategory; quantity: number }>({
@@ -40,92 +43,159 @@ function removePerson() {
 <template>
   <article class="card person-card">
     <header class="person-header">
-      <form v-if="editingName !== null" class="name-form" @submit.prevent="saveName">
-        <input v-model="editingName" class="input" type="text" maxlength="20" />
-        <button class="btn" type="submit">저장</button>
-      </form>
-      <template v-else>
+      <button type="button" class="toggle" :aria-expanded="open" @click="open = !open">
         <span class="avatar">{{ person.name.slice(0, 1) }}</span>
-        <strong class="name">{{ person.name }}</strong>
-        <button class="btn btn-text" type="button" @click="editingName = person.name">이름 수정</button>
-        <button class="btn btn-text btn-danger" type="button" @click="removePerson">삭제</button>
-      </template>
+        <span class="title">
+          <strong class="name">{{ person.name }}</strong>
+          <span class="summary">장비 {{ totalCount }}개</span>
+        </span>
+        <span class="chevron" :class="{ open }" aria-hidden="true" />
+        <span class="sr-only">{{ open ? '숨기기' : '더보기' }}</span>
+      </button>
     </header>
 
-    <div v-for="group in groups" :key="group.category" class="group">
-      <h3 class="group-label">{{ group.label }}</h3>
-      <ul class="gear-list">
-        <li v-for="item in group.items" :key="item.id" class="gear-item">
-          <span class="gear-name">{{ item.name }}</span>
-          <div class="stepper">
-            <button type="button" aria-label="하나 빼기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity - 1)">−</button>
-            <span>{{ item.quantity }}</span>
-            <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
-          </div>
-        </li>
-      </ul>
-    </div>
-    <p v-if="!groups.length" class="empty">아래에서 가진 장비를 골라 주세요.</p>
+    <div v-if="open" class="details">
+      <div class="person-actions">
+        <form v-if="editingName !== null" class="name-form" @submit.prevent="saveName">
+          <input v-model="editingName" class="input" type="text" maxlength="20" />
+          <button class="btn" type="submit">저장</button>
+        </form>
+        <template v-else>
+          <button class="btn btn-text" type="button" @click="editingName = person.name">이름 수정</button>
+          <button class="btn btn-text btn-danger" type="button" @click="removePerson">삭제</button>
+        </template>
+      </div>
 
-    <div class="presets">
-      <button
-        v-for="preset in EQUIPMENT_PRESETS"
-        :key="preset.name"
-        class="chip"
-        type="button"
-        @click="addPreset(preset)"
-      >
-        + {{ preset.name }}
-      </button>
-    </div>
+      <div v-for="group in groups" :key="group.category" class="group">
+        <h3 class="group-label">{{ group.label }}</h3>
+        <ul class="gear-list">
+          <li v-for="item in group.items" :key="item.id" class="gear-item">
+            <span class="gear-name">{{ item.name }}</span>
+            <div class="stepper">
+              <button type="button" aria-label="하나 빼기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity - 1)">−</button>
+              <span>{{ item.quantity }}</span>
+              <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <p v-if="!groups.length" class="empty">아래에서 가진 장비를 골라 주세요.</p>
 
-    <form class="custom-form" @submit.prevent="addCustom">
-      <input v-model="form.name" class="input" type="text" placeholder="직접 입력" maxlength="30" />
-      <select v-model="form.category" class="input" aria-label="카테고리">
-        <option v-for="[value, label] in categoryOptions" :key="value" :value="value">{{ label }}</option>
-      </select>
-      <button class="btn" type="submit" :disabled="!form.name.trim()">추가</button>
-    </form>
+      <div class="presets">
+        <button
+          v-for="preset in EQUIPMENT_PRESETS"
+          :key="preset.name"
+          class="chip"
+          type="button"
+          @click="addPreset(preset)"
+        >
+          + {{ preset.name }}
+        </button>
+      </div>
+
+      <form class="custom-form" @submit.prevent="addCustom">
+        <input v-model="form.name" class="input" type="text" placeholder="직접 입력" maxlength="30" />
+        <select v-model="form.category" class="input" aria-label="카테고리">
+          <option v-for="[value, label] in categoryOptions" :key="value" :value="value">{{ label }}</option>
+        </select>
+        <button class="btn" type="submit" :disabled="!form.name.trim()">추가</button>
+      </form>
+    </div>
   </article>
 </template>
 
 <style scoped lang="scss">
 .person-card {
+  padding: 0;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-size: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--color-text-muted);
+  border-bottom: 2px solid var(--color-text-muted);
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 0.15s;
+
+  &.open {
+    transform: translateY(3px) rotate(-135deg);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.details {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4);
+  border-top: 1px solid var(--color-border);
 }
 
-.person-header,
+.person-actions,
 .name-form {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-2);
+  padding-top: var(--space-2);
 }
 
 .name-form {
   flex: 1;
+  padding-top: 0;
 }
 
 .avatar {
   display: grid;
   flex: none;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--color-primary-soft);
   color: var(--color-primary);
   font-weight: 700;
   font-size: 14px;
-}
-
-.name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .group-label {

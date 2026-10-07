@@ -98,22 +98,26 @@ export const useCampStore = defineStore('camp', {
       }
     },
 
-    // 멤버가 이번 캠핑에 가져갈 장비
-    /** 보유 장비 하나를 가져갈 장비에 1개 더한다. 보유 수량을 넘지 않는다. */
+    // 배분: 멤버별 담당 장비 (Member.equipments). 다른 멤버의 장비를 맡을 수도 있고, ownerId로 원래 주인을 안다.
+    /** 이 장비가 이번 캠핑에서 이미 몇 개 배분됐는지 (모든 멤버 합계) */
+    assignedQuantity(equipmentId: ID): number {
+      return (this.currentCamp?.members ?? []).reduce(
+        (sum, m) => sum + (m.equipments.find((e) => e.id === equipmentId)?.quantity ?? 0),
+        0,
+      )
+    },
+    /** 보유 장비 하나를 멤버의 담당 장비에 1개 더한다. 모든 멤버 합계가 보유 수량을 넘지 않는다. */
     addMemberEquipment(memberId: ID, owned: Equipment) {
       const camp = this.currentCamp
       const member = camp?.members.find((m) => m.id === memberId)
       if (!camp || !member) return
+      if (this.assignedQuantity(owned.id) >= owned.quantity) return
       const bringing = member.equipments.find((e) => e.id === owned.id)
-      if (bringing) {
-        if (bringing.quantity >= owned.quantity) return
-        bringing.quantity += 1
-      } else {
-        member.equipments.push({ ...owned, quantity: 1 })
-      }
+      if (bringing) bringing.quantity += 1
+      else member.equipments.push({ ...owned, quantity: 1 })
       camp.updatedAt = now()
     },
-    /** 가져갈 장비에서 1개 뺀다. 0개가 되면 목록에서 지운다. */
+    /** 담당 장비에서 1개 뺀다. 0개가 되면 목록에서 지운다. */
     removeMemberEquipment(memberId: ID, equipmentId: ID) {
       const camp = this.currentCamp
       const member = camp?.members.find((m) => m.id === memberId)

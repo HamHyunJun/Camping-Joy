@@ -278,13 +278,14 @@ function removePerson() {
   gap: var(--space-2);
 
   button {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
     border: 1px solid var(--color-border);
     border-radius: 50%;
     background: var(--color-surface);
     color: var(--color-text);
-    font-size: 18px;
+    font-size: 15px;
     line-height: 1;
     cursor: pointer;
 

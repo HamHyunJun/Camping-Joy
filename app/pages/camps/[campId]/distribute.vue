@@ -102,7 +102,7 @@ const ignore = () => {}
               <ul class="gear-list">
                 <li v-for="item in group.items" :key="`${holderOf(item)?.id}:${item.id}`" class="gear-item">
                   <span class="gear-name">
-                    {{ item.name }}
+                    {{ equipmentLabel(item) }}
                     <small class="owner">{{ holderOf(item)?.name }}</small>
                   </span>
                   <div class="stepper">
@@ -153,7 +153,7 @@ const ignore = () => {}
               :class="{ 'is-used-up': remaining(item) < 1 }"
             >
               <span class="gear-name">
-                {{ item.name }}
+                {{ equipmentLabel(item) }}
                 <small class="owner">{{ ownerName(item.ownerId) }}</small>
               </span>
               <span class="qty">남은 {{ remaining(item) }}</span>
@@ -184,7 +184,7 @@ const ignore = () => {}
   display: grid;
   gap: var(--space-3);
 
-  @media (min-width: 860px) {
+  @include pc {
     grid-template-columns: 180px 1fr 1fr;
     align-items: start;
   }
@@ -212,7 +212,7 @@ const ignore = () => {}
   overflow-x: auto;
   list-style: none;
 
-  @media (min-width: 860px) {
+  @include pc {
     flex-direction: column;
     overflow: visible;
   }
@@ -229,7 +229,7 @@ const ignore = () => {}
   border-radius: 999px;
   white-space: nowrap;
 
-  @media (min-width: 860px) {
+  @include pc {
     border-radius: 8px;
   }
 }

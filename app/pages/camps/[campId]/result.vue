@@ -25,7 +25,7 @@ const rows = computed<ResultRow[]>(() =>
     .sort(
       (a, b) =>
         categoryOrder.indexOf(a.equipment.category) - categoryOrder.indexOf(b.equipment.category) ||
-        a.equipment.name.localeCompare(b.equipment.name, 'ko'),
+        equipmentLabel(a.equipment).localeCompare(equipmentLabel(b.equipment), 'ko'),
     ),
 )
 
@@ -121,7 +121,7 @@ function memberTotal(member: Member): number {
           <tbody>
             <tr v-for="row in rows" :key="row.key" :class="{ ready: store.isReady(row.member.id, row.equipment.id) }">
               <td>
-                {{ row.equipment.name }}
+                {{ equipmentLabel(row.equipment) }}
                 <small class="sub">{{ EQUIPMENT_CATEGORY_LABELS[row.equipment.category] }}</small>
               </td>
               <td>
@@ -153,7 +153,7 @@ function memberTotal(member: Member): number {
                     :checked="store.isReady(member.id, item.id)"
                     @change="store.toggleReady(member.id, item.id)"
                   />
-                  {{ item.name }} × {{ item.quantity }}
+                  {{ equipmentLabel(item) }} × {{ item.quantity }}
                   <small v-if="item.ownerId !== member.id" class="sub">{{ ownerName(item.ownerId) }} 장비</small>
                 </label>
               </li>
@@ -170,7 +170,7 @@ function memberTotal(member: Member): number {
       </div>
       <ul class="card plain-list leftover">
         <li v-for="{ owned, left } in unassigned" :key="owned.id">
-          {{ owned.name }} <small class="sub">{{ ownerName(owned.ownerId) }} · {{ left }}개</small>
+          {{ equipmentLabel(owned) }} <small class="sub">{{ ownerName(owned.ownerId) }} · {{ left }}개</small>
         </li>
       </ul>
     </section>
@@ -371,7 +371,7 @@ function memberTotal(member: Member): number {
   display: grid;
   gap: var(--space-2);
 
-  @media (min-width: 640px) {
+  @include pc {
     grid-template-columns: 1fr 1fr;
   }
 }

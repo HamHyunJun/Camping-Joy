@@ -18,8 +18,22 @@ const form = reactive<{ name: string; category: EquipmentCategory; quantity: num
   quantity: 1,
 })
 
+/** 크기를 골라야 하는 장비를 눌렀을 때 크기 선택을 연다. */
+const sizingPreset = ref<EquipmentPreset | null>(null)
+const sizingGuide = computed(() => (sizingPreset.value ? sizeGuideOf(sizingPreset.value.name) : undefined))
+
 function addPreset(preset: EquipmentPreset) {
+  if (sizeGuideOf(preset.name)) {
+    sizingPreset.value = sizingPreset.value?.name === preset.name ? null : preset
+    return
+  }
   gear.addEquipment(props.person.id, { ...preset, quantity: 1 })
+}
+
+function addWithSize(size: string) {
+  if (!sizingPreset.value) return
+  gear.addEquipment(props.person.id, { ...sizingPreset.value, quantity: 1, size })
+  sizingPreset.value = null
 }
 
 function addCustom() {
@@ -70,7 +84,22 @@ function removePerson() {
         <h3 class="group-label">{{ group.label }}</h3>
         <ul class="gear-list">
           <li v-for="item in group.items" :key="item.id" class="gear-item">
-            <span class="gear-name">{{ item.name }}</span>
+            <span class="gear-name">
+              {{ item.name }}
+              <select
+                v-if="sizeGuideOf(item.name)"
+                class="size-select"
+                :value="item.size ?? ''"
+                aria-label="크기"
+                @change="gear.setEquipmentSize(person.id, item.id, ($event.target as HTMLSelectElement).value)"
+              >
+                <option value="" disabled>크기 선택</option>
+                <option v-for="option in sizeGuideOf(item.name)!.options" :key="option.label" :value="option.label">
+                  {{ option.label }}
+                </option>
+              </select>
+              <SizeGuideTooltip v-if="sizeGuideOf(item.name)" :guide="sizeGuideOf(item.name)!" />
+            </span>
             <div class="stepper">
               <button type="button" aria-label="하나 빼기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity - 1)">−</button>
               <span>{{ item.quantity }}</span>
@@ -86,11 +115,24 @@ function removePerson() {
           v-for="preset in EQUIPMENT_PRESETS"
           :key="preset.name"
           class="chip"
+          :class="{ active: sizingPreset?.name === preset.name }"
           type="button"
           @click="addPreset(preset)"
         >
           + {{ preset.name }}
         </button>
+      </div>
+
+      <div v-if="sizingPreset && sizingGuide" class="size-picker">
+        <div class="size-picker-title">
+          {{ sizingPreset.name }} 크기를 골라 주세요
+          <SizeGuideTooltip :guide="sizingGuide" />
+        </div>
+        <div class="size-options">
+          <button v-for="option in sizingGuide.options" :key="option.label" class="chip" type="button" @click="addWithSize(option.label)">
+            {{ option.label }}
+          </button>
+        </div>
       </div>
 
       <form class="custom-form" @submit.prevent="addCustom">
@@ -261,6 +303,56 @@ function removePerson() {
   font: inherit;
   font-size: 14px;
   cursor: pointer;
+}
+
+.gear-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chip.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.size-picker {
+  padding: var(--space-3);
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  background: var(--color-primary-soft);
+}
+
+.size-picker-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.size-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+
+  .chip {
+    background: var(--color-surface);
+  }
+}
+
+.size-select {
+  margin-left: var(--space-1);
+  padding: 2px 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 13px;
 }
 
 .custom-form {

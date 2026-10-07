@@ -18,6 +18,8 @@ export interface Equipment {
   name: string
   category: EquipmentCategory
   quantity: number
+  /** 크기 (텐트 '2~3인용', 테이블·아이스박스 '소'/'중'/'대' 등). 크기 구분이 있는 장비만 */
+  size?: string
   /** 장비를 가진 사람(Person.id) */
   ownerId: ID
 }

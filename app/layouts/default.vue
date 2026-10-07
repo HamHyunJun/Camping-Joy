@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import menuIcon from '~/assets/icons/menu.svg'
+
 const route = useRoute()
 const campId = computed(() => {
   const id = route.params.campId
@@ -18,6 +20,19 @@ const menuItems = [
   <div class="layout">
     <header class="header">
       <NuxtLink to="/" class="logo">CampPack</NuxtLink>
+      <!-- PC: 헤더에 메뉴 나열 -->
+      <nav class="header-nav" aria-label="메뉴">
+        <NuxtLink
+          v-for="item in menuItems"
+          :key="item.to"
+          :to="item.to"
+          class="header-nav-item"
+          :class="{ active: route.path === item.to }"
+        >
+          {{ item.label }}
+        </NuxtLink>
+      </nav>
+      <!-- 모바일: 더보기 아이콘 -->
       <button
         class="menu-button"
         type="button"
@@ -25,7 +40,7 @@ const menuItems = [
         aria-label="메뉴"
         @click="menuOpen = !menuOpen"
       >
-        <span /><span /><span />
+        <img :src="menuIcon" alt="" width="24" height="24" />
       </button>
     </header>
 
@@ -75,23 +90,51 @@ const menuItems = [
   text-decoration: none;
 }
 
-.menu-button {
+.header-nav {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
+  gap: var(--space-1);
+
+  @include mobile {
+    display: none;
+  }
+}
+
+.header-nav-item {
+  padding: var(--space-2) var(--space-3);
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-text);
+  }
+
+  &.active {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+}
+
+.menu-button {
+  display: none;
+  place-items: center;
   width: 44px;
   height: 44px;
-  padding: 0 11px;
+  padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
 
-  span {
-    display: block;
-    height: 2px;
-    border-radius: 1px;
-    background: var(--color-text);
+  @include mobile {
+    display: grid;
+  }
+}
+
+.menu-backdrop,
+.menu {
+  @include pc {
+    display: none !important;
   }
 }
 

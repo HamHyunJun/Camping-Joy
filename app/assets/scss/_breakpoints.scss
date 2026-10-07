@@ -1,0 +1,14 @@
+// 화면 크기 기준. 모바일: width <= 1080px, PC: width > 1080px
+$mobile-max: 1080px;
+
+@mixin mobile {
+  @media (max-width: $mobile-max) {
+    @content;
+  }
+}
+
+@mixin pc {
+  @media (min-width: $mobile-max + 1) {
+    @content;
+  }
+}

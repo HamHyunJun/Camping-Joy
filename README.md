@@ -9,10 +9,10 @@ Nuxt 4 (SPA, `ssr: false`) · Vue 3 · TypeScript · Pinia · SCSS
 ## 시작하기
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
-npm run typecheck
-npm run generate   # 정적 SPA 빌드 (.output/public)
+pnpm install
+pnpm dev            # http://localhost:3000
+pnpm typecheck
+pnpm generate       # 정적 SPA 빌드 (.output/public)
 ```
 
 ## 구조
@@ -27,12 +27,7 @@ app/
   constants/         장비 카테고리, 단계 정의
 ```
 
-## 개발 단계
+## 화면 흐름
 
-1. 프로젝트 구조와 타입 정의 ← 현재
-2. 캠핑 정보 및 멤버 등록
-3. 장비 등록
-4. 장비 배분 데이터 구조
-5. 배분 결과 UI
-6. 장비 배분 알고리즘
-7. UX 개선 및 예외 처리
+1. ☰ 메뉴 → 멤버·장비 등록: 사람과 각자 보유 장비를 한 번만 등록
+2. 내 캠핑 → 새 캠핑: 캠핑 정보 → 멤버 → 배분(공통으로 챙길 장비를 고르면 주인이 챙김) → 결과(캠핑 정보, 멤버, 배분표, 준비 체크, 남은 장비)

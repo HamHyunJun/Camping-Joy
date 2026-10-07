@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { CAMP_STEPS } from '~/constants/steps'
+import { CAMP_STEPS, type CampStep } from '~/constants/steps'
 
 const props = defineProps<{ campId: string }>()
 const route = useRoute()
+const store = useCampStore()
+
+function canVisit(path: CampStep['path']): boolean {
+  return store.currentCamp ? canVisitStep(store.currentCamp, path) : false
+}
 
 const currentIndex = computed(() =>
   CAMP_STEPS.findIndex((step) => route.path.endsWith(`/${step.path}`)),
@@ -15,12 +20,16 @@ const currentIndex = computed(() =>
       <li
         v-for="(step, index) in CAMP_STEPS"
         :key="step.path"
-        :class="{ active: index === currentIndex, done: index < currentIndex }"
+        :class="{ active: index === currentIndex, done: index < currentIndex, locked: !canVisit(step.path) }"
       >
-        <NuxtLink :to="`/camps/${props.campId}/${step.path}`">
+        <NuxtLink v-if="canVisit(step.path)" :to="`/camps/${props.campId}/${step.path}`" class="step">
           <span class="num">{{ index + 1 }}</span>
           <span class="label">{{ step.label }}</span>
         </NuxtLink>
+        <span v-else class="step" aria-disabled="true" title="앞 단계를 먼저 입력해 주세요">
+          <span class="num">{{ index + 1 }}</span>
+          <span class="label">{{ step.label }}</span>
+        </span>
       </li>
     </ol>
   </nav>
@@ -41,7 +50,7 @@ const currentIndex = computed(() =>
     list-style: none;
   }
 
-  a {
+  .step {
     display: flex;
     align-items: center;
     gap: var(--space-1);
@@ -61,6 +70,11 @@ const currentIndex = computed(() =>
     border-radius: 50%;
     background: var(--color-border);
     font-size: 12px;
+  }
+
+  .locked .step {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .done a {

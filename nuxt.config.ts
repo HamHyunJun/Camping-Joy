@@ -4,6 +4,14 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
   css: ['~/assets/scss/main.scss'],
+  vite: {
+    css: {
+      preprocessorOptions: {
+        // 모든 SCSS에서 @include mobile / @include pc 를 쓸 수 있게 한다.
+        scss: { additionalData: '@use "~/assets/scss/breakpoints" as *;\n' },
+      },
+    },
+  },
   typescript: {
     strict: true,
   },

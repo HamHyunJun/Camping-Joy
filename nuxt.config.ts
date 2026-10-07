@@ -7,6 +7,14 @@ export default defineNuxtConfig({
   piniaPluginPersistedstate: {
     storage: 'localStorage',
   },
+  // 캠핑 링크 공유용 Supabase. 비어 있으면 공유 없이 기기에만 저장한다.
+  // Vercel 환경 변수 NUXT_PUBLIC_SUPABASE_URL, NUXT_PUBLIC_SUPABASE_KEY(anon/publishable 키)로 채운다.
+  runtimeConfig: {
+    public: {
+      supabaseUrl: '',
+      supabaseKey: '',
+    },
+  },
   css: ['~/assets/scss/main.scss'],
   vite: {
     css: {

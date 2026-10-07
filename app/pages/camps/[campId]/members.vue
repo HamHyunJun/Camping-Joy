@@ -43,11 +43,19 @@ function remove(member: Member) {
 function bringingCount(member: Member): number {
   return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
 }
+
+function reset() {
+  if (!confirm('멤버를 모두 빼고 배분도 비울까요?')) return
+  store.resetMembers()
+}
 </script>
 
 <template>
   <section>
-    <h1 class="page-title">멤버</h1>
+    <div class="page-head">
+      <h1 class="page-title">멤버</h1>
+      <button v-if="members.length" class="btn btn-text btn-danger" type="button" @click="reset">초기화</button>
+    </div>
     <p class="page-desc">함께 가는 사람의 이름을 넣어 주세요. 등록해 둔 사람이면 장비를 불러옵니다.</p>
 
     <form class="add-form" @submit.prevent="addByName">

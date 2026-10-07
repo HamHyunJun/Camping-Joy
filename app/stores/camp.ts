@@ -136,6 +136,25 @@ export const useCampStore = defineStore('camp', {
       camp.updatedAt = now()
     },
 
+    // 초기화
+    /** 멤버를 모두 뺀다. 배분과 준비 체크도 함께 비운다. */
+    resetMembers() {
+      const camp = this.currentCamp
+      if (!camp) return
+      camp.members = []
+      camp.assignments = []
+      camp.readyItems = []
+      camp.updatedAt = now()
+    },
+    /** 멤버는 두고 배분(챙길 장비)과 준비 체크만 비운다. */
+    resetDistribution() {
+      const camp = this.currentCamp
+      if (!camp) return
+      for (const member of camp.members) member.equipments = []
+      camp.readyItems = []
+      camp.updatedAt = now()
+    },
+
     // 결과: 담당 장비 준비 완료 체크
     isReady(memberId: ID, equipmentId: ID): boolean {
       return this.currentCamp?.readyItems?.includes(readyKey(memberId, equipmentId)) ?? false

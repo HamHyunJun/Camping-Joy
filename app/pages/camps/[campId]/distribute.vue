@@ -64,11 +64,19 @@ function assignedCount(memberId: ID): number {
 
 const keepItem = (item: Equipment) => item
 const ignore = () => {}
+
+function reset() {
+  if (!confirm('공통으로 챙길 장비를 모두 비울까요?')) return
+  store.resetDistribution()
+}
 </script>
 
 <template>
   <section>
-    <h1 class="page-title">장비 배분</h1>
+    <div class="page-head">
+      <h1 class="page-title">장비 배분</h1>
+      <button v-if="shared.length" class="btn btn-text btn-danger" type="button" @click="reset">초기화</button>
+    </div>
     <p class="page-desc">오른쪽에서 이번 캠핑에 챙길 장비를 끌어다 놓거나 + 를 눌러 주세요. 장비는 주인이 챙기고, 멤버별 개수는 왼쪽에 표시돼요.</p>
 
     <p v-if="!members.length" class="empty">먼저 멤버를 추가해 주세요.</p>

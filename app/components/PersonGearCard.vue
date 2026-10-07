@@ -98,35 +98,40 @@ function removePerson() {
         </template>
       </div>
 
-      <div v-for="group in groups" :key="group.category" class="group">
-        <h3 class="group-label">{{ group.label }}</h3>
-        <ul class="gear-list">
-          <li v-for="item in group.items" :key="item.id" class="gear-item">
-            <span class="gear-name">
-              {{ item.name }}
-              <select
-                v-if="sizeGuideOf(item.name)"
-                class="size-select"
-                :value="item.size ?? ''"
-                aria-label="크기"
-                @change="gear.setEquipmentSize(person.id, item.id, ($event.target as HTMLSelectElement).value)"
-              >
-                <option value="" disabled>크기 선택</option>
-                <option v-for="option in sizeGuideOf(item.name)!.options" :key="option.label" :value="option.label">
-                  {{ option.label }}
-                </option>
-              </select>
-              <SizeGuideTooltip v-if="sizeGuideOf(item.name)" :guide="sizeGuideOf(item.name)!" />
-            </span>
-            <div class="stepper">
-              <button type="button" aria-label="하나 빼기" @click="decrease(item)">−</button>
-              <span>{{ item.quantity }}</span>
-              <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
-            </div>
-          </li>
-        </ul>
+      <div v-if="groups.length" class="groups">
+        <section v-for="group in groups" :key="group.category" class="group">
+          <h3 class="group-label">
+            {{ group.label }}
+            <span class="group-count">{{ group.items.reduce((sum, e) => sum + e.quantity, 0) }}</span>
+          </h3>
+          <ul class="gear-list">
+            <li v-for="item in group.items" :key="item.id" class="gear-item">
+              <span class="gear-name">
+                {{ item.name }}
+                <select
+                  v-if="sizeGuideOf(item.name)"
+                  class="size-select"
+                  :value="item.size ?? ''"
+                  aria-label="크기"
+                  @change="gear.setEquipmentSize(person.id, item.id, ($event.target as HTMLSelectElement).value)"
+                >
+                  <option value="" disabled>크기 선택</option>
+                  <option v-for="option in sizeGuideOf(item.name)!.options" :key="option.label" :value="option.label">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <SizeGuideTooltip v-if="sizeGuideOf(item.name)" :guide="sizeGuideOf(item.name)!" />
+              </span>
+              <div class="stepper">
+                <button type="button" aria-label="하나 빼기" @click="decrease(item)">−</button>
+                <span>{{ item.quantity }}</span>
+                <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
+              </div>
+            </li>
+          </ul>
+        </section>
       </div>
-      <p v-if="!groups.length" class="empty">아래에서 가진 장비를 골라 주세요.</p>
+      <p v-else class="empty">아래에서 가진 장비를 골라 주세요.</p>
 
       <div class="presets">
         <button
@@ -251,14 +256,40 @@ function removePerson() {
   height: 40px;
 }
 
+.groups {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.group {
+  padding: var(--space-3) var(--space-2) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+
 .group-label {
-  margin: 0 0 var(--space-1);
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-weight: 600;
+  display: flex;
+  padding: 0 var(--space-1);
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.group-count {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  font-size: 12px;
+  line-height: 20px;
 }
 
 .gear-list {
+  display: grid;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -268,15 +299,16 @@ function removePerson() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 44px;
-
-  & + & {
-    border-top: 1px solid var(--color-border);
-  }
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
 }
 
 .stepper {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--space-2);
 
@@ -317,9 +349,10 @@ function removePerson() {
 
 .gear-name {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .chip.active {
@@ -355,6 +388,7 @@ function removePerson() {
 }
 
 .size-select {
+  min-width: 0;
   margin-left: var(--space-1);
   padding: 2px 4px;
   border: 1px solid var(--color-border);

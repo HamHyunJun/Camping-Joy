@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { EquipmentCategory, Person } from '~/types/camp'
+import type { Equipment, EquipmentCategory, Person } from '~/types/camp'
 import { EQUIPMENT_CATEGORY_LABELS, EQUIPMENT_PRESETS, type EquipmentPreset } from '~/constants/equipment'
 
 const props = defineProps<{ person: Person; initiallyOpen?: boolean }>()
@@ -10,6 +10,10 @@ const categoryOptions = Object.entries(EQUIPMENT_CATEGORY_LABELS) as [EquipmentC
 
 const open = ref(props.initiallyOpen ?? false)
 const totalCount = computed(() => props.person.equipments.reduce((sum, e) => sum + e.quantity, 0))
+/** 접힌 상태에서 보여줄 카테고리별 개수 */
+const categorySummary = computed(() =>
+  groups.value.map((group) => `${group.label} ${group.items.reduce((sum, e) => sum + e.quantity, 0)}`).join(' · '),
+)
 
 const editingName = ref<string | null>(null)
 const form = reactive<{ name: string; category: EquipmentCategory; quantity: number }>({
@@ -43,13 +47,20 @@ function addCustom() {
   form.quantity = 1
 }
 
+function decrease(item: Equipment) {
+  if (item.quantity <= 1 && !confirm(`${equipmentLabel(item)}을(를) 목록에서 삭제할까요?`)) return
+  gear.setEquipmentQuantity(props.person.id, item.id, item.quantity - 1)
+}
+
 function saveName() {
   if (editingName.value !== null) gear.renamePerson(props.person.id, editingName.value)
   editingName.value = null
 }
 
 function removePerson() {
-  if (!confirm(`${props.person.name}님과 등록된 장비를 모두 삭제할까요?`)) return
+  const campCount = useCampStore().countCampsWithPerson(props.person.id)
+  const extra = campCount ? `\n멤버로 들어간 캠핑 ${campCount}곳에서도 빠지고, 챙길 장비도 함께 빠져요.` : ''
+  if (!confirm(`${props.person.name}님과 등록된 장비를 모두 삭제할까요?${extra}`)) return
   gear.removePerson(props.person.id)
 }
 </script>
@@ -61,7 +72,9 @@ function removePerson() {
         <span class="avatar">{{ person.name.slice(0, 1) }}</span>
         <span class="title">
           <strong class="name">{{ person.name }}</strong>
-          <span class="summary">장비 {{ totalCount }}개</span>
+          <span class="summary">
+            장비 {{ totalCount }}개<template v-if="!open && categorySummary"> · {{ categorySummary }}</template>
+          </span>
         </span>
         <span class="chevron" :class="{ open }" aria-hidden="true" />
         <span class="sr-only">{{ open ? '숨기기' : '더보기' }}</span>
@@ -101,7 +114,7 @@ function removePerson() {
               <SizeGuideTooltip v-if="sizeGuideOf(item.name)" :guide="sizeGuideOf(item.name)!" />
             </span>
             <div class="stepper">
-              <button type="button" aria-label="하나 빼기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity - 1)">−</button>
+              <button type="button" aria-label="하나 빼기" @click="decrease(item)">−</button>
               <span>{{ item.quantity }}</span>
               <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
             </div>
@@ -180,8 +193,11 @@ function removePerson() {
 }
 
 .summary {
+  overflow: hidden;
   color: var(--color-text-muted);
   font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chevron {
@@ -208,7 +224,7 @@ function removePerson() {
 .details {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
   padding: 0 var(--space-4) var(--space-4);
   border-top: 1px solid var(--color-border);
 }
@@ -228,16 +244,8 @@ function removePerson() {
 }
 
 .avatar {
-  display: grid;
-  flex: none;
-  place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-weight: 700;
-  font-size: 14px;
 }
 
 .group-label {
@@ -270,15 +278,21 @@ function removePerson() {
   gap: var(--space-2);
 
   button {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
     border: 1px solid var(--color-border);
     border-radius: 50%;
     background: var(--color-surface);
     color: var(--color-text);
-    font-size: 18px;
+    font-size: 15px;
     line-height: 1;
     cursor: pointer;
+
+    &:hover:not(:disabled) {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
   }
 
   span {
@@ -295,14 +309,7 @@ function removePerson() {
 }
 
 .chip {
-  padding: 6px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
+  background: var(--color-surface-muted);
 }
 
 .gear-name {
@@ -321,7 +328,7 @@ function removePerson() {
 .size-picker {
   padding: var(--space-3);
   border: 1px solid var(--color-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--color-primary-soft);
 }
 

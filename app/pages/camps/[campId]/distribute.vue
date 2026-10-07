@@ -51,10 +51,40 @@ function subtract(item: Equipment) {
   if (holder) store.removeMemberEquipment(holder.id, item.id)
 }
 
-/** 보유 장비를 공통 목록에 놓았을 때. 보유 장비에서 온 항목을 찾아 추가한다. */
+// 드래그 중에는 공통 목록 위에 덮개를 띄워 거기에 놓게 한다.
+// 목록 안에 바로 끼워 넣으면 SortableJS가 자리를 계산하며 항목들이 위아래로 흔들린다.
+const dropZone = ref<HTMLElement | null>(null)
+const dragging = ref(false)
+const overDropZone = ref(false)
+
+function trackPointer(event: DragEvent | MouseEvent | TouchEvent) {
+  const point = 'touches' in event ? event.touches[0] : event
+  const rect = dropZone.value?.getBoundingClientRect()
+  if (!point || !rect) return
+  overDropZone.value =
+    point.clientX >= rect.left && point.clientX <= rect.right && point.clientY >= rect.top && point.clientY <= rect.bottom
+}
+
+const pointerEvents = ['dragover', 'mousemove', 'touchmove'] as const
+
+function onDragStart() {
+  dragging.value = true
+  overDropZone.value = false
+  for (const type of pointerEvents) document.addEventListener(type, trackPointer, { capture: true, passive: true })
+}
+
+function onDragEnd() {
+  for (const type of pointerEvents) document.removeEventListener(type, trackPointer, { capture: true })
+  dragging.value = false
+  overDropZone.value = false
+}
+
+onBeforeUnmount(onDragEnd)
+
+/** 보유 장비를 덮개에 놓았을 때. 덮개 안에서 손을 뗐을 때만 추가한다. */
 function onDrop(list: Equipment[]) {
   const dropped = list.find((item) => pool.value.includes(item))
-  if (dropped) add(dropped)
+  if (dropped && overDropZone.value) add(dropped)
 }
 
 function assignedCount(memberId: ID): number {
@@ -96,14 +126,7 @@ function reset() {
       <!-- 공통으로 챙길 장비 -->
       <section class="panel">
         <h2 class="panel-title">공통으로 챙길 장비</h2>
-        <VueDraggable
-          :model-value="shared"
-          class="drop-zone"
-          :class="{ empty: !shared.length }"
-          :group="{ name: dragGroup, pull: false, put: true }"
-          :sort="false"
-          @update:model-value="onDrop"
-        >
+        <div ref="dropZone" class="drop-zone" :class="{ empty: !shared.length }">
           <template v-if="shared.length">
             <div v-for="group in sharedGroups" :key="group.category" class="group">
               <h3 class="group-label">{{ group.label }}</h3>
@@ -131,7 +154,21 @@ function reset() {
             </div>
           </template>
           <p v-else class="hint">오른쪽 장비를 여기로 끌어 놓거나 + 를 눌러 주세요.</p>
-        </VueDraggable>
+
+          <!-- 드래그 중에만 보이는 덮개. 여기에 놓으면 추가된다. -->
+          <VueDraggable
+            v-show="dragging"
+            :model-value="[]"
+            class="drop-overlay"
+            :class="{ over: overDropZone }"
+            :group="{ name: dragGroup, pull: false, put: true }"
+            :sort="false"
+            @update:model-value="onDrop"
+          >
+            <span class="drop-plus" aria-hidden="true">+</span>
+            <span class="drop-text">놓으면 추가돼요</span>
+          </VueDraggable>
+        </div>
       </section>
 
       <!-- 멤버들이 가진 장비 -->
@@ -152,6 +189,8 @@ function reset() {
             filter=".is-used-up"
             :delay="150"
             :delay-on-touch-only="true"
+            @start="onDragStart"
+            @end="onDragEnd"
             @update:model-value="ignore"
           >
             <li
@@ -324,13 +363,14 @@ function reset() {
 
 .round {
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 50%;
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
 
@@ -343,16 +383,17 @@ function reset() {
 .stepper {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
 
   span {
-    min-width: 20px;
+    min-width: 18px;
     text-align: center;
     font-weight: 600;
   }
 }
 
 .drop-zone {
+  position: relative;
   min-height: 160px;
   padding: var(--space-2);
   border: 2px dashed var(--color-border);
@@ -364,10 +405,69 @@ function reset() {
     place-items: center;
   }
 
-  // 끌어다 놓는 중 생기는 미리보기 항목은 숨기고, store가 반영한 목록만 보여준다.
+}
+
+.drop-overlay {
+  position: absolute;
+  inset: -2px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius);
+  background: rgb(243 245 241 / 55%);
+  backdrop-filter: blur(3px);
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+
+  // 끌어다 놓는 중 덮개에 들어온 미리보기 항목은 숨긴다.
   :deep(> .gear-item) {
     display: none;
   }
+
+  &.over {
+    border-color: var(--color-primary);
+    background: rgb(230 240 234 / 75%);
+
+    .drop-plus {
+      transform: scale(1.15);
+      background: var(--color-primary);
+      color: #fff;
+    }
+
+    .drop-text {
+      color: var(--color-primary);
+    }
+  }
+}
+
+.drop-plus {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-size: 32px;
+  line-height: 1;
+  pointer-events: none;
+  transition:
+    transform 0.15s,
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.drop-text {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .hint {

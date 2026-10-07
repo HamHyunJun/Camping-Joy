@@ -3,6 +3,10 @@ export default defineNuxtConfig({
   ssr: false,
   devtools: { enabled: true },
   modules: ['@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt'],
+  // 기본값(쿠키)은 4KB 제한이 있어 캠핑이 쌓이면 저장이 깨진다.
+  piniaPluginPersistedstate: {
+    storage: 'localStorage',
+  },
   css: ['~/assets/scss/main.scss'],
   vite: {
     css: {
@@ -17,12 +21,14 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'CampPack',
+      title: 'Camping&Joy',
       htmlAttrs: { lang: 'ko' },
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         { name: 'description', content: '캠핑 장비를 멤버들에게 나눠 맡기고 한눈에 확인하는 서비스' },
+        { name: 'theme-color', content: '#ffffff' },
       ],
+      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     },
   },
 })

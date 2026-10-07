@@ -114,14 +114,6 @@ function reset() {
 </template>
 
 <style scoped lang="scss">
-.notice {
-  margin: 0 0 var(--space-3);
-  padding: var(--space-3);
-  border-radius: 8px;
-  background: var(--color-primary-soft);
-  font-size: 14px;
-}
-
 .add-form {
   display: flex;
   gap: var(--space-2);
@@ -143,22 +135,6 @@ function reset() {
   font-weight: 600;
 }
 
-.chip {
-  padding: 6px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-
-  small {
-    margin-left: 2px;
-    color: var(--color-text-muted);
-  }
-}
-
 .member-list {
   margin: var(--space-4) 0 0;
   padding: var(--space-1) var(--space-4);
@@ -174,19 +150,6 @@ function reset() {
   & + & {
     border-top: 1px solid var(--color-border);
   }
-}
-
-.avatar {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-weight: 700;
-  font-size: 14px;
 }
 
 .name {

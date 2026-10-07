@@ -94,8 +94,9 @@ alter table public.camp_members enable row level security;
 alter table public.camp_gear enable row level security;
 alter table public.camp_items enable row level security;
 
+-- owner_id 조건은 insert ... returning에서 방금 만든 행을 보게 하려고 둔다(can_view_camp는 같은 문장의 새 행을 못 본다).
 create policy "camps: 볼 수 있는 캠핑" on public.camps for select to authenticated
-  using (public.can_view_camp(id));
+  using (owner_id = auth.uid() or public.can_view_camp(id));
 create policy "camps: 내가 만들기" on public.camps for insert to authenticated
   with check (owner_id = auth.uid());
 create policy "camps: 만든 기기만 수정" on public.camps for update to authenticated

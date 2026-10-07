@@ -5,7 +5,7 @@
 \set C '''00000000-0000-0000-0000-00000000000c'''
 -- A(owner) creates camp, members 현준(A)/민지/서연, gear, items
 set role authenticated; select set_config('request.jwt.claim.sub', :A, false);
-insert into camps (name, date) values ('자라섬', '2026-10-10');
+insert into camps (name, date) values ('자라섬', '2026-10-10') returning name as "A insert returning";
 insert into camp_members (camp_id, name, position) select id, n, p from camps, (values ('현준',0),('민지',1),('서연',2)) v(n,p);
 insert into camp_gear (camp_id, member_id, name, category, quantity) select m.camp_id, m.id, g, 'kitchen', 2 from camp_members m, (values ('버너'),('코펠')) v(g);
 insert into camp_items (camp_id, gear_id, quantity) select camp_id, id, 2 from camp_gear;

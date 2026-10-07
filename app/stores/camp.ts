@@ -1,12 +1,10 @@
 import { defineStore } from 'pinia'
-import type { Camp, Equipment, ID, JoinedCamp, Member, Person } from '~/types/camp'
+import type { Camp, Equipment, ID, Member, Person } from '~/types/camp'
 import { createId } from '~/utils/id'
 
 interface CampState {
   camps: Camp[]
   currentCampId: ID | null
-  /** 다른 사람이 공유한 링크로 연 캠핑 */
-  joinedCamps: JoinedCamp[]
 }
 
 export interface CampInfoInput {
@@ -32,7 +30,6 @@ export const useCampStore = defineStore('camp', {
   state: (): CampState => ({
     camps: [],
     currentCampId: null,
-    joinedCamps: [],
   }),
   getters: {
     currentCamp: (state): Camp | null =>
@@ -81,24 +78,6 @@ export const useCampStore = defineStore('camp', {
       if (this.currentCampId === campId) this.currentCampId = null
     },
 
-    // 캠핑 링크 공유
-    /** 서버에 올렸다고 기록한다. 이후 이 캠핑이 바뀌면 자동으로 다시 올린다. */
-    setRemote(campId: ID, token: string) {
-      const camp = this.camps.find((c) => c.id === campId)
-      if (camp) camp.remote = { token, syncedAt: now() }
-    },
-    /** 링크로 연 캠핑을 기억한다(최근에 연 것이 위로). */
-    rememberJoined(entry: Omit<JoinedCamp, 'openedAt'>) {
-      const previous = this.joinedCamps.find((c) => c.token === entry.token)
-      this.joinedCamps = [
-        { ...previous, ...entry, openedAt: now() },
-        ...this.joinedCamps.filter((c) => c.token !== entry.token),
-      ]
-    },
-    forgetJoined(token: string) {
-      this.joinedCamps = this.joinedCamps.filter((c) => c.token !== token)
-    },
-
     // 멤버 (장비 등록에 있는 사람을 캠핑에 넣는다)
     addMember(person: Person): Member | null {
       const camp = this.currentCamp
@@ -133,6 +112,17 @@ export const useCampStore = defineStore('camp', {
     /** 이 사람이 멤버로 들어 있는 캠핑 수 */
     countCampsWithPerson(personId: ID): number {
       return this.camps.filter((camp) => camp.members.some((m) => m.id === personId)).length
+    },
+    /** 같은 사람이 다른 id로 등록돼 있을 때(서버 목록과 처음 합칠 때) 캠핑 멤버 id를 바꾼다. */
+    remapPerson(oldId: ID, newId: ID) {
+      for (const camp of this.camps) {
+        if (camp.members.some((m) => m.id === newId)) continue
+        const member = camp.members.find((m) => m.id === oldId)
+        if (!member) continue
+        member.id = newId
+        for (const item of member.equipments) if (item.ownerId === oldId) item.ownerId = newId
+        camp.readyItems = camp.readyItems?.map((key) => (key.startsWith(`${oldId}:`) ? `${newId}${key.slice(oldId.length)}` : key))
+      }
     },
     /** 등록에서 사람을 지우면 모든 캠핑에서 멤버와 그 사람의 장비를 뺀다. */
     removePersonFromCamps(personId: ID) {

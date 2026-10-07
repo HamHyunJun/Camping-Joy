@@ -4,6 +4,8 @@ import { createId } from '~/utils/id'
 
 interface GearState {
   people: Person[]
+  /** 이 기기에 있던 등록 목록을 서버에 한 번 올렸는지 (처음 연결할 때만 올린다) */
+  syncedOnce: boolean
 }
 
 export interface EquipmentInput {
@@ -17,6 +19,7 @@ export interface EquipmentInput {
 export const useGearStore = defineStore('gear', {
   state: (): GearState => ({
     people: [],
+    syncedOnce: false,
   }),
   getters: {
     findPerson: (state) => (personId: ID): Person | undefined =>
@@ -40,6 +43,22 @@ export const useGearStore = defineStore('gear', {
       if (!person || !trimmed) return
       person.name = trimmed
       useCampStore().syncMemberName(personId, trimmed)
+    },
+    /** 서버의 등록 목록으로 바꾼다. 다른 기기에서 바뀐 이름·장비를 이 기기의 캠핑에도 맞춘다. */
+    replacePeople(next: Person[]) {
+      const camps = useCampStore()
+      for (const person of this.people) {
+        if (!next.some((p) => p.id === person.id)) camps.removePersonFromCamps(person.id)
+      }
+      for (const person of next) {
+        const previous = this.findPerson(person.id)
+        if (!previous) continue
+        if (previous.name !== person.name) camps.syncMemberName(person.id, person.name)
+        if (JSON.stringify(previous.equipments) !== JSON.stringify(person.equipments)) {
+          camps.syncOwnerEquipments(person.id, person.equipments)
+        }
+      }
+      this.people = next
     },
     removePerson(personId: ID) {
       this.people = this.people.filter((p) => p.id !== personId)

@@ -4,7 +4,7 @@ import { EQUIPMENT_CATEGORY_LABELS } from '~/constants/equipment'
 const categoryOrder = Object.keys(EQUIPMENT_CATEGORY_LABELS)
 
 /** 공유용으로 카테고리 순서대로 정렬한 장비 목록 */
-export function sortByCategory<T extends Pick<Equipment, 'category'>>(list: T[]): T[] {
+export function sortByCategory(list: Equipment[]): Equipment[] {
   return [...list].sort((a, b) => categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category))
 }
 

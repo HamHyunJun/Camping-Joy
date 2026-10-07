@@ -9,10 +9,10 @@ Nuxt 4 (SPA, `ssr: false`) · Vue 3 · TypeScript · Pinia · SCSS
 ## 시작하기
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
-npm run typecheck
-npm run generate   # 정적 SPA 빌드 (.output/public)
+pnpm install
+pnpm dev            # http://localhost:3000
+pnpm typecheck
+pnpm generate       # 정적 SPA 빌드 (.output/public)
 ```
 
 ## 구조

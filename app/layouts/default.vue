@@ -12,7 +12,7 @@ const menuOpen = ref(false)
 watch(() => route.fullPath, () => (menuOpen.value = false))
 
 const menuItems = [
-  { to: '/', label: '내 캠핑' },
+  { to: '/', label: '전체 캠핑' },
   { to: '/gear', label: '멤버·장비 등록' },
 ]
 </script>

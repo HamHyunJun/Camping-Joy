@@ -5,6 +5,10 @@ import { createId } from '~/utils/id'
 interface CampState {
   camps: Camp[]
   currentCampId: ID | null
+  /** 이 기기를 쓰는 사람(등록된 Person.id). '내가 참여한 캠핑'을 고를 때 쓴다. */
+  meId: ID | null
+  /** 이 기기에 있던 캠핑을 서버에 한 번 올렸는지 (처음 연결할 때만 올린다) */
+  syncedOnce: boolean
 }
 
 export interface CampInfoInput {
@@ -30,6 +34,8 @@ export const useCampStore = defineStore('camp', {
   state: (): CampState => ({
     camps: [],
     currentCampId: null,
+    meId: null,
+    syncedOnce: false,
   }),
   getters: {
     currentCamp: (state): Camp | null =>
@@ -72,6 +78,15 @@ export const useCampStore = defineStore('camp', {
     removeEmptyDrafts() {
       const empty = this.camps.filter((camp) => !camp.name.trim() && !camp.members.length)
       for (const camp of empty) this.deleteCamp(camp.id)
+    },
+    /** 서버의 캠핑 목록으로 바꾼다. 아직 서버에 올리지 않은 이 기기의 캠핑은 남긴다. */
+    replaceCamps(server: Camp[]) {
+      const pending = this.camps.filter((camp) => !camp.synced && !server.some((c) => c.id === camp.id))
+      this.camps = [...server, ...pending]
+      if (this.currentCampId && !this.camps.some((c) => c.id === this.currentCampId)) this.currentCampId = null
+    },
+    markSynced(campIds: ID[]) {
+      for (const camp of this.camps) if (campIds.includes(camp.id)) camp.synced = true
     },
     deleteCamp(campId: ID) {
       this.camps = this.camps.filter((camp) => camp.id !== campId)

@@ -73,6 +73,8 @@ export interface Camp {
   assignments: Assignment[]
   /** 준비 완료로 체크한 담당 장비. `${memberId}:${equipmentId}` 형식 (이전에 저장된 캠핑에는 없을 수 있음) */
   readyItems?: string[]
+  /** 서버에 올라간 적이 있는지. 서버에 없는데 true면 다른 사람이 지운 캠핑이다. */
+  synced?: boolean
   createdAt: string
   updatedAt: string
 }

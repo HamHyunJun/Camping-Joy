@@ -69,6 +69,8 @@ export interface Camp {
   members: Member[]
   requiredEquipments: RequiredEquipment[]
   assignments: Assignment[]
+  /** 준비 완료로 체크한 담당 장비. `${memberId}:${equipmentId}` 형식 (이전에 저장된 캠핑에는 없을 수 있음) */
+  readyItems?: string[]
   createdAt: string
   updatedAt: string
 }

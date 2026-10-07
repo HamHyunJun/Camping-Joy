@@ -16,6 +16,10 @@ function now(): string {
   return new Date().toISOString()
 }
 
+function readyKey(memberId: ID, equipmentId: ID): string {
+  return `${memberId}:${equipmentId}`
+}
+
 function today(): string {
   const date = new Date()
   const offset = date.getTimezoneOffset() * 60_000
@@ -44,6 +48,7 @@ export const useCampStore = defineStore('camp', {
         members: [],
         requiredEquipments: [],
         assignments: [],
+        readyItems: [],
         createdAt: timestamp,
         updatedAt: timestamp,
       }
@@ -124,11 +129,25 @@ export const useCampStore = defineStore('camp', {
       const bringing = member?.equipments.find((e) => e.id === equipmentId)
       if (!camp || !member || !bringing) return
       bringing.quantity -= 1
-      if (bringing.quantity < 1) member.equipments = member.equipments.filter((e) => e.id !== equipmentId)
+      if (bringing.quantity < 1) {
+        member.equipments = member.equipments.filter((e) => e.id !== equipmentId)
+        camp.readyItems = camp.readyItems?.filter((k) => k !== readyKey(memberId, equipmentId))
+      }
       camp.updatedAt = now()
     },
 
-    // 배분은 4단계 이후에 추가한다.
+    // 결과: 담당 장비 준비 완료 체크
+    isReady(memberId: ID, equipmentId: ID): boolean {
+      return this.currentCamp?.readyItems?.includes(readyKey(memberId, equipmentId)) ?? false
+    },
+    toggleReady(memberId: ID, equipmentId: ID) {
+      const camp = this.currentCamp
+      if (!camp) return
+      const key = readyKey(memberId, equipmentId)
+      const items = camp.readyItems ?? []
+      camp.readyItems = items.includes(key) ? items.filter((k) => k !== key) : [...items, key]
+      camp.updatedAt = now()
+    },
   },
   persist: true,
 })

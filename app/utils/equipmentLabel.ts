@@ -6,7 +6,13 @@ export function sizeGuideOf(name: string): EquipmentSizeGuide | undefined {
   return EQUIPMENT_SIZE_GUIDES[name.trim()]
 }
 
-/** 화면에 보여줄 장비 이름. 크기가 있으면 '텐트 (2~3인용)'처럼 붙인다. */
-export function equipmentLabel(equipment: Pick<Equipment, 'name' | 'size'>): string {
-  return equipment.size ? `${equipment.name} (${equipment.size})` : equipment.name
+/** 이름(모델명)을 적을 수 있는 장비인지. 지금은 텐트만. */
+export function hasModelName(name: string): boolean {
+  return name.trim() === '텐트'
+}
+
+/** 화면에 보여줄 장비 이름. '텐트 · 코베아 고스트 (2~3인용)'처럼 이름과 크기를 붙인다. */
+export function equipmentLabel(equipment: Pick<Equipment, 'name' | 'size' | 'model'>): string {
+  const name = equipment.model ? `${equipment.name} · ${equipment.model}` : equipment.name
+  return equipment.size ? `${name} (${equipment.size})` : name
 }

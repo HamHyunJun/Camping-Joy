@@ -13,6 +13,7 @@ export interface EquipmentInput {
   category: EquipmentCategory
   quantity: number
   size?: string
+  model?: string
 }
 
 /** 사람별 보유 장비 등록. 여러 캠핑에서 불러 쓴다. */
@@ -69,9 +70,10 @@ export const useGearStore = defineStore('gear', {
       const person = this.findPerson(personId)
       const name = input.name.trim()
       if (!person || !name || input.quantity < 1) return null
-      // 같은 이름·카테고리·크기 장비가 이미 있으면 수량만 늘린다.
+      const model = input.model?.trim() || undefined
+      // 같은 이름·카테고리·크기·모델명 장비가 이미 있으면 수량만 늘린다.
       const same = person.equipments.find(
-        (e) => e.name === name && e.category === input.category && e.size === input.size,
+        (e) => e.name === name && e.category === input.category && e.size === input.size && e.model === model,
       )
       if (same) {
         same.quantity += input.quantity
@@ -83,6 +85,7 @@ export const useGearStore = defineStore('gear', {
         category: input.category,
         quantity: input.quantity,
         ...(input.size ? { size: input.size } : {}),
+        ...(model ? { model } : {}),
         ownerId: personId,
       }
       person.equipments.push(equipment)
@@ -94,7 +97,12 @@ export const useGearStore = defineStore('gear', {
       const equipment = person?.equipments.find((e) => e.id === equipmentId)
       if (!person || !equipment) return
       const same = person.equipments.find(
-        (e) => e.id !== equipmentId && e.name === equipment.name && e.category === equipment.category && e.size === size,
+        (e) =>
+          e.id !== equipmentId &&
+          e.name === equipment.name &&
+          e.category === equipment.category &&
+          e.size === size &&
+          e.model === equipment.model,
       )
       if (same) {
         same.quantity += equipment.quantity
@@ -103,6 +111,16 @@ export const useGearStore = defineStore('gear', {
         return
       }
       equipment.size = size
+      useCampStore().syncOwnerEquipments(personId, person.equipments)
+    },
+    /** 이름(모델명)을 바꾼다. 비우면 지운다. */
+    setEquipmentModel(personId: ID, equipmentId: ID, model: string) {
+      const person = this.findPerson(personId)
+      const equipment = person?.equipments.find((e) => e.id === equipmentId)
+      if (!person || !equipment) return
+      const trimmed = model.trim().slice(0, 30)
+      if (trimmed) equipment.model = trimmed
+      else delete equipment.model
       useCampStore().syncOwnerEquipments(personId, person.equipments)
     },
     setEquipmentQuantity(personId: ID, equipmentId: ID, quantity: number) {

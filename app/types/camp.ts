@@ -20,6 +20,8 @@ export interface Equipment {
   quantity: number
   /** 크기 (텐트 '2~3인용', 테이블·아이스박스 '소'/'중'/'대' 등). 크기 구분이 있는 장비만 */
   size?: string
+  /** 장비 이름(모델명). 텐트만 적는다 (예: '코베아 고스트') */
+  model?: string
   /** 장비를 가진 사람(Person.id) */
   ownerId: ID
 }

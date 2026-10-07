@@ -15,6 +15,7 @@ export type EquipmentRow = {
   name: string
   category: EquipmentCategory
   size: string | null
+  model: string | null
   quantity: number
   created_at: string
 }

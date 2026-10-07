@@ -25,9 +25,13 @@ function addByName() {
     addError.value = '이미 추가된 멤버예요.'
     return
   }
-  // 처음 보는 이름이면 장비 등록에도 사람을 만들어 다음 캠핑에서 다시 쓸 수 있게 한다.
-  const person = gear.findPersonByName(name) ?? gear.addPerson(name)
-  if (person) store.addMember(person)
+  // 멤버는 멤버·장비 등록에 있는 사람만 고를 수 있다.
+  const person = gear.findPersonByName(name)
+  if (!person) {
+    addError.value = '등록되지 않은 사람이에요. 멤버·장비 등록에서 먼저 추가해 주세요.'
+    return
+  }
+  store.addMember(person)
   newName.value = ''
   addError.value = ''
 }
@@ -56,14 +60,17 @@ function reset() {
       <h1 class="page-title">멤버</h1>
       <button v-if="members.length" class="btn btn-text btn-danger" type="button" @click="reset">초기화</button>
     </div>
-    <p class="page-desc">함께 가는 사람의 이름을 넣어 주세요. 등록해 둔 사람이면 장비를 불러옵니다.</p>
+    <p class="page-desc">멤버·장비 등록에 있는 사람 중 함께 가는 사람을 골라 주세요.</p>
+    <p v-if="!gear.people.length" class="notice">
+      아직 등록된 사람이 없어요. <NuxtLink to="/gear">멤버·장비 등록</NuxtLink>에서 먼저 추가해 주세요.
+    </p>
 
     <form class="add-form" @submit.prevent="addByName">
       <input
         v-model="newName"
         class="input"
         type="text"
-        placeholder="이름"
+        placeholder="등록된 사람 이름"
         maxlength="20"
         autocomplete="off"
         list="registered-people"
@@ -74,7 +81,9 @@ function reset() {
       </datalist>
       <button class="btn btn-primary" type="submit" :disabled="!newName.trim()">추가</button>
     </form>
-    <p v-if="addError" class="field-error">{{ addError }}</p>
+    <p v-if="addError" class="field-error">
+      {{ addError }} <NuxtLink v-if="addError.startsWith('등록되지')" to="/gear">등록하러 가기</NuxtLink>
+    </p>
 
     <div v-if="candidates.length" class="candidates">
       <span class="candidates-label">등록된 사람</span>
@@ -105,6 +114,14 @@ function reset() {
 </template>
 
 <style scoped lang="scss">
+.notice {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: 8px;
+  background: var(--color-primary-soft);
+  font-size: 14px;
+}
+
 .add-form {
   display: flex;
   gap: var(--space-2);

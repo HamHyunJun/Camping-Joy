@@ -9,7 +9,14 @@ import type { Camp } from '~/types/camp'
 const props = defineProps<{ camp: Camp }>()
 const emit = defineEmits<{ close: [] }>()
 
-const mode = ref<'image' | 'text'>('image')
+const store = useCampStore()
+const gear = useGearStore()
+const sharing = useCampSharing()
+
+// 서버가 설정돼 있으면 캠핑 링크를 먼저 보여 준다.
+const mode = ref<'link' | 'image' | 'text'>(sharing.enabled ? 'link' : 'image')
+const linkUrl = computed(() => (props.camp.remote ? campLinkUrl(props.camp.remote.token) : ''))
+const linking = ref(false)
 const card = ref<HTMLElement | null>(null)
 const busy = ref(false)
 const toast = ref('')
@@ -121,6 +128,38 @@ async function shareText() {
   }
 }
 
+/** 캠핑을 서버에 올리고 링크를 만든다. 이후 캠핑을 고치면 자동으로 다시 올라간다. */
+async function createLink() {
+  linking.value = true
+  try {
+    const token = await sharing.uploadCamp(props.camp, gear.people)
+    store.setRemote(props.camp.id, token)
+  } catch {
+    showToast('링크를 만들지 못했어요. 인터넷 연결을 확인해 주세요.')
+  } finally {
+    linking.value = false
+  }
+}
+
+async function copyLink() {
+  try {
+    await navigator.clipboard.writeText(linkUrl.value)
+    showToast('링크를 복사했어요.')
+  } catch {
+    showToast('복사하지 못했어요. 주소를 길게 눌러 복사해 주세요.')
+  }
+}
+
+async function shareLink() {
+  const title = props.camp.name || 'Camping&Joy'
+  try {
+    if (native) await Share.share({ title, url: linkUrl.value })
+    else await navigator.share({ title, url: linkUrl.value })
+  } catch (error) {
+    if (!isAbort(error)) showToast('공유하지 못했어요.')
+  }
+}
+
 function saveText() {
   download(new Blob([text.value], { type: 'text/plain;charset=utf-8' }), `${fileName.value}.txt`)
 }
@@ -141,11 +180,22 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
       </header>
 
       <div class="tabs" role="tablist">
+        <button v-if="sharing.enabled" type="button" role="tab" :aria-selected="mode === 'link'" @click="mode = 'link'">
+          캠핑 링크
+        </button>
         <button type="button" role="tab" :aria-selected="mode === 'image'" @click="mode = 'image'">이미지</button>
         <button type="button" role="tab" :aria-selected="mode === 'text'" @click="mode = 'text'">텍스트</button>
       </div>
 
-      <div class="preview">
+      <div v-if="mode === 'link'" class="link-box">
+        <p class="link-desc">
+          링크를 받은 멤버는 로그인 없이 캠핑을 보고, <b>나는 누구?</b>에서 자기 이름을 고를 수 있어요.
+          캠핑을 고치면 링크에도 바로 반영돼요.
+        </p>
+        <p v-if="linkUrl" class="link-url">{{ linkUrl }}</p>
+      </div>
+
+      <div v-else class="preview">
         <!-- 이미지로 저장되는 카드. 한 화면에 들어오도록 멤버별로 장비를 칩으로 모은다. -->
         <div v-show="mode === 'image'" ref="card" class="share-card">
           <div class="share-top">
@@ -176,7 +226,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
         <pre v-show="mode === 'text'" class="share-text">{{ text }}</pre>
       </div>
 
-      <div v-if="mode === 'image'" class="actions">
+      <div v-if="mode === 'link'" class="actions">
+        <button v-if="!linkUrl" class="btn btn-primary" type="button" :disabled="linking" @click="createLink">
+          {{ linking ? '링크 만드는 중…' : '링크 만들기' }}
+        </button>
+        <template v-else>
+          <button class="btn" :class="{ 'btn-primary': !canShare }" type="button" @click="copyLink">링크 복사</button>
+          <button v-if="canShare" class="btn btn-primary" type="button" @click="shareLink">링크 공유</button>
+        </template>
+      </div>
+      <div v-else-if="mode === 'image'" class="actions">
         <button v-if="!native" class="btn" type="button" :disabled="busy" @click="saveImage">이미지 저장</button>
         <button v-if="canShare" class="btn btn-primary" type="button" :disabled="busy" @click="shareImage">이미지 공유</button>
       </div>
@@ -262,6 +321,32 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
       box-shadow: var(--shadow-sm);
     }
   }
+}
+
+.link-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.link-desc {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.link-url {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: 14px;
+  word-break: break-all;
+  user-select: all;
 }
 
 .preview {

@@ -9,6 +9,11 @@ const groups = computed(() => groupByCategory(props.person.equipments))
 const categoryOptions = Object.entries(EQUIPMENT_CATEGORY_LABELS) as [EquipmentCategory, string][]
 
 const open = ref(props.initiallyOpen ?? false)
+// 다른 사람을 새로 추가하면 앞사람 카드는 접는다.
+watch(
+  () => props.initiallyOpen,
+  (value) => (open.value = value ?? false),
+)
 const totalCount = computed(() => props.person.equipments.reduce((sum, e) => sum + e.quantity, 0))
 /** 접힌 상태에서 보여줄 카테고리별 개수 */
 const categorySummary = computed(() =>
@@ -137,13 +142,11 @@ function removePerson() {
       </div>
 
       <div v-if="sizingPreset && sizingGuide" class="size-picker">
-        <div class="size-picker-title">
-          {{ sizingPreset.name }} 크기를 골라 주세요
-          <SizeGuideTooltip :guide="sizingGuide" />
-        </div>
+        <!-- 툴팁이 크기 칩을 가리지 않도록, 여기서는 기준을 칩에 바로 적는다. -->
+        <div class="size-picker-title">{{ sizingPreset.name }} 크기를 골라 주세요</div>
         <div class="size-options">
           <button v-for="option in sizingGuide.options" :key="option.label" class="chip" type="button" @click="addWithSize(option.label)">
-            {{ option.label }}
+            {{ option.label }}<small v-if="option.description">{{ option.description }}</small>
           </button>
         </div>
       </div>

@@ -6,6 +6,9 @@ import type { Camp } from '~/types/camp'
 const store = useCampStore()
 const gear = useGearStore()
 
+// 정보를 입력하지 않고 나온 빈 캠핑은 목록에 남기지 않는다.
+store.removeEmptyDrafts()
+
 const gearCount = computed(() => gear.people.reduce((sum, p) => sum + p.equipments.length, 0))
 
 const camps = computed(() =>

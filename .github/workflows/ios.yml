@@ -25,6 +25,10 @@ jobs:
 
       - name: Build web and copy into iOS project
         run: pnpm ios:sync
+        # 캠핑 링크 공유용 Supabase 공개 주소·키 (앱 안에 들어가도 되는 공개용 값)
+        env:
+          NUXT_PUBLIC_SUPABASE_URL: https://qwodeatibsondugrvajr.supabase.co
+          NUXT_PUBLIC_SUPABASE_KEY: sb_publishable_2LYYxzWnjfUjbXKDi4qXsg_PC3sL395
 
       - name: Build for iOS Simulator
         run: >

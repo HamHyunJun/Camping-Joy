@@ -141,9 +141,30 @@ const currentIndex = computed(() =>
     }
   }
 
+  // 휴대폰: 이름을 번호 아래에 두어 다섯 단계가 한 화면에 다 들어오게 한다.
   @include mobile {
+    ol {
+      padding: var(--space-2) var(--space-3);
+    }
+
+    li {
+      align-items: flex-start;
+
+      &:not(:last-child)::after {
+        min-width: 8px;
+        margin: 14px 2px 0;
+      }
+    }
+
+    .step {
+      flex-direction: column;
+      gap: 2px;
+      padding: 2px;
+      border-radius: 8px;
+    }
+
     .label {
-      font-size: 13px;
+      font-size: 11px;
     }
   }
 }

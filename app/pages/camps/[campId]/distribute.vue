@@ -350,9 +350,10 @@ function reset() {
 .gear-name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  // 텐트처럼 이름이 길어도 주인 이름이 잘리지 않게 줄을 바꾼다.
+  line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .owner {

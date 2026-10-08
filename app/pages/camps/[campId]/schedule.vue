@@ -39,7 +39,7 @@
           v-model="form.title"
           class="input"
           type="text"
-          placeholder="할 일 (예: 집합)"
+          placeholder="할 일"
           maxlength="40"
           autocomplete="off"
         />

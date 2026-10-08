@@ -5,7 +5,7 @@
         <h1 class="page-title">멤버·장비 등록</h1>
         <p class="hero-desc">자주 함께 가는 사람과 각자 가진 장비를 한 번만 등록해 두면, 캠핑을 만들 때 불러올 수 있어요.</p>
       </div>
-      <button v-if="!adding" class="btn btn-primary" type="button" @click="openAdd">+ 멤버 추가</button>
+      <button v-if="!adding && gear.people.length" class="btn btn-primary" type="button" @click="openAdd">+ 멤버 추가</button>
     </div>
 
     <form v-if="adding" class="card add-form" @submit.prevent="addPerson(newName)">

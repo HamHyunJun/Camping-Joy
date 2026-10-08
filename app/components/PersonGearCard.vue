@@ -46,7 +46,6 @@
                   aria-label="크기"
                   @update:model-value="gear.setEquipmentSize(person.id, item.id, $event)"
                 />
-                <SizeGuideTooltip v-if="sizeGuideOf(item.name)" :guide="sizeGuideOf(item.name)!" />
               </span>
               <div class="stepper">
                 <button type="button" aria-label="하나 빼기" @click="decrease(item)">−</button>

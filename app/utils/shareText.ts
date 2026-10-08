@@ -13,8 +13,21 @@ export function buildShareText(camp: Camp): string {
   const lines: string[] = []
   const dday = formatDday(camp.date)
   lines.push(`⛺ ${camp.name || '이름 없는 캠핑'}`)
+  if (camp.place) {
+    const { name, address } = camp.place
+    lines.push(`📍 ${[name, address && (name ? `(${address})` : address)].filter(Boolean).join(' ')}`)
+  }
   lines.push(`📅 ${formatDate(camp.date)}${dday ? ` · ${dday}` : ''}`)
   lines.push(`👥 ${camp.members.map((m) => m.name).join(', ')} (${camp.members.length}명)`)
+  const schedule = scheduleGroups(sortSchedule(camp.schedule ?? []))
+  if (schedule.length) {
+    lines.push('')
+    lines.push('🕒 일정')
+    for (const group of schedule) {
+      if (schedule.length > 1 || group.day > 1) lines.push(`[${group.day}일차 · ${formatDayDate(camp.date, group.day)}]`)
+      for (const item of group.items) lines.push(`${item.time} ${item.title}`)
+    }
+  }
   lines.push('')
   lines.push('🎒 누가 무엇을 챙기나요')
   for (const member of camp.members) {

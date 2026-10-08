@@ -10,6 +10,8 @@ export function isStepComplete(camp: Camp, path: CampStep['path']): boolean {
       return camp.members.length > 0
     case 'distribute':
       return camp.members.some((m) => m.equipments.length > 0)
+    // 일정은 짜지 않아도 결과로 넘어갈 수 있다.
+    case 'schedule':
     case 'result':
       return true
   }
@@ -51,6 +53,7 @@ export function campProgress(camp: Camp): CampProgress {
     info: '캠핑 정보 입력 중',
     members: '멤버 고르는 중',
     distribute: '장비 배분 중',
+    schedule: '일정 짜는 중',
     result: ready === total ? '준비 완료' : '준비 중',
   }
   return { step, label: labels[step], total, ready }

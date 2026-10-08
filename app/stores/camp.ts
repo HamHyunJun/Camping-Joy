@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Camp, Equipment, ID, Member, Person } from '~/types/camp'
+import type { Camp, CampPlace, Equipment, ID, Member, Person, ScheduleItem } from '~/types/camp'
 import { createId } from '~/utils/id'
 
 interface CampState {
@@ -13,6 +13,7 @@ interface CampState {
 
 export interface CampInfoInput {
   name: string
+  place: CampPlace
   date: string
 }
 
@@ -40,8 +41,16 @@ export const useCampStore = defineStore('camp', {
   getters: {
     currentCamp: (state): Camp | null =>
       state.camps.find((camp) => camp.id === state.currentCampId) ?? null,
-    sortedCamps: (state): Camp[] =>
-      [...state.camps].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    /** 오늘이나 앞으로 갈 캠핑. 가까운 날짜가 먼저 */
+    upcomingCamps: (state): Camp[] =>
+      state.camps
+        .filter((c) => c.date >= today())
+        .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt)),
+    /** 날짜가 지난 캠핑. 최근 날짜가 먼저 */
+    pastCamps: (state): Camp[] =>
+      state.camps
+        .filter((c) => c.date < today())
+        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
   },
   actions: {
     // 캠핑
@@ -55,6 +64,7 @@ export const useCampStore = defineStore('camp', {
         requiredEquipments: [],
         assignments: [],
         readyItems: [],
+        schedule: [],
         createdAt: timestamp,
         updatedAt: timestamp,
       }
@@ -71,6 +81,8 @@ export const useCampStore = defineStore('camp', {
       const camp = this.currentCamp
       if (!camp) return
       camp.name = input.name.trim()
+      const place = { name: input.place.name.trim(), address: input.place.address.trim() }
+      camp.place = place.name || place.address ? place : undefined
       camp.date = input.date
       camp.updatedAt = now()
     },
@@ -245,6 +257,38 @@ export const useCampStore = defineStore('camp', {
       const key = readyKey(memberId, equipmentId)
       const items = camp.readyItems ?? []
       camp.readyItems = items.includes(key) ? items.filter((k) => k !== key) : [...items, key]
+      camp.updatedAt = now()
+    },
+
+    // 일정
+    addScheduleItem(input: Omit<ScheduleItem, 'id'>) {
+      const camp = this.currentCamp
+      const title = input.title.trim().slice(0, 40)
+      if (!camp || !title) return
+      camp.schedule = [...(camp.schedule ?? []), { ...input, id: createId(), title }]
+      camp.updatedAt = now()
+    },
+    updateScheduleItem(itemId: ID, patch: Partial<Omit<ScheduleItem, 'id'>>) {
+      const camp = this.currentCamp
+      const item = camp?.schedule?.find((s) => s.id === itemId)
+      if (!camp || !item) return
+      if (patch.time) item.time = patch.time
+      if (patch.title?.trim()) item.title = patch.title.trim().slice(0, 40)
+      camp.updatedAt = now()
+    },
+    removeScheduleItem(itemId: ID) {
+      const camp = this.currentCamp
+      if (!camp) return
+      camp.schedule = camp.schedule?.filter((s) => s.id !== itemId)
+      camp.updatedAt = now()
+    },
+    /** 그날 일정을 모두 지우고, 뒤의 날을 하루씩 앞당긴다. */
+    removeScheduleDay(day: number) {
+      const camp = this.currentCamp
+      if (!camp) return
+      camp.schedule = (camp.schedule ?? [])
+        .filter((s) => s.day !== day)
+        .map((s) => (s.day > day ? { ...s, day: s.day - 1 } : s))
       camp.updatedAt = now()
     },
   },

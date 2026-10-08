@@ -1,59 +1,3 @@
-<script setup lang="ts">
-import type { Member, Person } from '~/types/camp'
-
-const store = useCampStore()
-const gear = useGearStore()
-const route = useRoute()
-
-const members = computed(() => store.currentCamp?.members ?? [])
-/** 등록은 되어 있지만 아직 이 캠핑에 없는 사람 */
-const candidates = computed(() =>
-  gear.people.filter((p) => !members.value.some((m) => m.id === p.id)),
-)
-
-const newName = ref('')
-const addError = ref('')
-
-function addPerson(person: Person) {
-  store.addMember(person)
-}
-
-function addByName() {
-  const name = newName.value.trim()
-  if (!name) return
-  if (members.value.some((m) => m.name === name)) {
-    addError.value = '이미 추가된 멤버예요.'
-    return
-  }
-  // 멤버는 멤버·장비 등록에 있는 사람만 고를 수 있다.
-  const person = gear.findPersonByName(name)
-  if (!person) {
-    addError.value = '등록되지 않은 사람이에요. 멤버·장비 등록에서 먼저 추가해 주세요.'
-    return
-  }
-  store.addMember(person)
-  newName.value = ''
-  addError.value = ''
-}
-
-function remove(member: Member) {
-  const message = member.equipments.length
-    ? `${member.name}님과 담당으로 정한 장비를 빼시겠어요?`
-    : `${member.name}님을 이번 캠핑에서 빼시겠어요?`
-  if (!confirm(message)) return
-  store.removeMember(member.id)
-}
-
-function bringingCount(member: Member): number {
-  return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
-}
-
-function reset() {
-  if (!confirm('멤버를 모두 빼고 배분도 비울까요?')) return
-  store.resetMembers()
-}
-</script>
-
 <template>
   <section>
     <div class="page-head">
@@ -112,6 +56,62 @@ function reset() {
     </div>
   </section>
 </template>
+
+<script setup lang="ts">
+import type { Member, Person } from '~/types/camp'
+
+const store = useCampStore()
+const gear = useGearStore()
+const route = useRoute()
+
+const members = computed(() => store.currentCamp?.members ?? [])
+/** 등록은 되어 있지만 아직 이 캠핑에 없는 사람 */
+const candidates = computed(() =>
+  gear.people.filter((p) => !members.value.some((m) => m.id === p.id)),
+)
+
+const newName = ref('')
+const addError = ref('')
+
+function addPerson(person: Person) {
+  store.addMember(person)
+}
+
+function addByName() {
+  const name = newName.value.trim()
+  if (!name) return
+  if (members.value.some((m) => m.name === name)) {
+    addError.value = '이미 추가된 멤버예요.'
+    return
+  }
+  // 멤버는 멤버·장비 등록에 있는 사람만 고를 수 있다.
+  const person = gear.findPersonByName(name)
+  if (!person) {
+    addError.value = '등록되지 않은 사람이에요. 멤버·장비 등록에서 먼저 추가해 주세요.'
+    return
+  }
+  store.addMember(person)
+  newName.value = ''
+  addError.value = ''
+}
+
+function remove(member: Member) {
+  const message = member.equipments.length
+    ? `${member.name}님과 담당으로 정한 장비를 빼시겠어요?`
+    : `${member.name}님을 이번 캠핑에서 빼시겠어요?`
+  if (!confirm(message)) return
+  store.removeMember(member.id)
+}
+
+function bringingCount(member: Member): number {
+  return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
+}
+
+function reset() {
+  if (!confirm('멤버를 모두 빼고 배분도 비울까요?')) return
+  store.resetMembers()
+}
+</script>
 
 <style scoped lang="scss">
 .add-form {

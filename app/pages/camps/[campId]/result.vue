@@ -1,55 +1,3 @@
-<script setup lang="ts">
-import type { Equipment, ID, Member } from '~/types/camp'
-import { EQUIPMENT_CATEGORY_LABELS } from '~/constants/equipment'
-
-const store = useCampStore()
-const gear = useGearStore()
-const route = useRoute()
-
-const camp = computed(() => store.currentCamp)
-const members = computed(() => camp.value?.members ?? [])
-const view = ref<'equipment' | 'member'>('equipment')
-const sharing = ref(false)
-
-interface ResultRow {
-  key: string
-  member: Member
-  equipment: Equipment
-}
-
-const categoryOrder = Object.keys(EQUIPMENT_CATEGORY_LABELS)
-
-/** 장비별 표: 카테고리 → 장비 이름 순으로 정렬 */
-const rows = computed<ResultRow[]>(() =>
-  members.value
-    .flatMap((member) => member.equipments.map((equipment) => ({ key: `${member.id}:${equipment.id}`, member, equipment })))
-    .sort(
-      (a, b) =>
-        categoryOrder.indexOf(a.equipment.category) - categoryOrder.indexOf(b.equipment.category) ||
-        equipmentLabel(a.equipment).localeCompare(equipmentLabel(b.equipment), 'ko'),
-    ),
-)
-
-const totalQuantity = computed(() => rows.value.reduce((sum, row) => sum + row.equipment.quantity, 0))
-const readyCount = computed(() => rows.value.filter((row) => store.isReady(row.member.id, row.equipment.id)).length)
-
-/** 멤버들이 가졌지만 아무에게도 배분되지 않은 장비 */
-const unassigned = computed(() =>
-  members.value
-    .flatMap((m) => gear.findPerson(m.id)?.equipments ?? [])
-    .map((owned) => ({ owned, left: owned.quantity - store.assignedQuantity(owned.id) }))
-    .filter((item) => item.left > 0),
-)
-
-function ownerName(ownerId: ID): string {
-  return members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
-}
-
-function memberTotal(member: Member): number {
-  return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
-}
-</script>
-
 <template>
   <section v-if="camp">
     <div class="page-head">
@@ -67,6 +15,11 @@ function memberTotal(member: Member): number {
           <p class="camp-date">{{ formatDate(camp.date) }}</p>
         </div>
         <NuxtLink class="btn btn-text" :to="`/camps/${route.params.campId}/info`">수정</NuxtLink>
+      </div>
+      <div v-if="camp.place" class="place">
+        <strong>{{ camp.place.name || '캠핑장' }}</strong>
+        <p v-if="camp.place.address">{{ camp.place.address }}</p>
+        <PlaceMap :place="camp.place" />
       </div>
       <dl class="stats">
         <div>
@@ -86,6 +39,25 @@ function memberTotal(member: Member): number {
         <span :style="{ width: rows.length ? `${(readyCount / rows.length) * 100}%` : '0%' }" />
       </div>
     </article>
+
+    <!-- 일정 -->
+    <section v-if="schedule.length" class="block">
+      <div class="block-head">
+        <h2>일정</h2>
+        <NuxtLink class="btn btn-text" :to="`/camps/${route.params.campId}/schedule`">수정</NuxtLink>
+      </div>
+      <div class="card schedule">
+        <div v-for="group in scheduleByDay" :key="group.day" class="schedule-day">
+          <h3 v-if="scheduleByDay.length > 1 || group.day > 1">{{ group.day }}일차 · {{ formatDayDate(camp.date, group.day) }}</h3>
+          <ol>
+            <li v-for="item in group.items" :key="item.id">
+              <time>{{ item.time }}</time>
+              <span>{{ item.title }}</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
 
     <!-- 멤버 -->
     <section class="block">
@@ -190,6 +162,60 @@ function memberTotal(member: Member): number {
   </section>
 </template>
 
+<script setup lang="ts">
+import type { Equipment, ID, Member } from '~/types/camp'
+import { EQUIPMENT_CATEGORY_LABELS } from '~/constants/equipment'
+
+const store = useCampStore()
+const gear = useGearStore()
+const route = useRoute()
+
+const camp = computed(() => store.currentCamp)
+const members = computed(() => camp.value?.members ?? [])
+const schedule = computed(() => sortSchedule(camp.value?.schedule ?? []))
+const scheduleByDay = computed(() => scheduleGroups(schedule.value))
+const view = ref<'equipment' | 'member'>('equipment')
+const sharing = ref(false)
+
+interface ResultRow {
+  key: string
+  member: Member
+  equipment: Equipment
+}
+
+const categoryOrder = Object.keys(EQUIPMENT_CATEGORY_LABELS)
+
+/** 장비별 표: 카테고리 → 장비 이름 순으로 정렬 */
+const rows = computed<ResultRow[]>(() =>
+  members.value
+    .flatMap((member) => member.equipments.map((equipment) => ({ key: `${member.id}:${equipment.id}`, member, equipment })))
+    .sort(
+      (a, b) =>
+        categoryOrder.indexOf(a.equipment.category) - categoryOrder.indexOf(b.equipment.category) ||
+        equipmentLabel(a.equipment).localeCompare(equipmentLabel(b.equipment), 'ko'),
+    ),
+)
+
+const totalQuantity = computed(() => rows.value.reduce((sum, row) => sum + row.equipment.quantity, 0))
+const readyCount = computed(() => rows.value.filter((row) => store.isReady(row.member.id, row.equipment.id)).length)
+
+/** 멤버들이 가졌지만 아무에게도 배분되지 않은 장비 */
+const unassigned = computed(() =>
+  members.value
+    .flatMap((m) => gear.findPerson(m.id)?.equipments ?? [])
+    .map((owned) => ({ owned, left: owned.quantity - store.assignedQuantity(owned.id) }))
+    .filter((item) => item.left > 0),
+)
+
+function ownerName(ownerId: ID): string {
+  return members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
+}
+
+function memberTotal(member: Member): number {
+  return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
+}
+</script>
+
 <style scoped lang="scss">
 .share-button {
   min-height: 40px;
@@ -211,6 +237,27 @@ function memberTotal(member: Member): number {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
   font-size: 14px;
+}
+
+.place {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+
+  strong {
+    display: block;
+    font-size: 15px;
+  }
+
+  p {
+    margin: 2px 0 0;
+    color: var(--color-text-muted);
+    font-size: 14px;
+  }
+
+  .place-map {
+    margin-top: var(--space-3);
+  }
 }
 
 .stats {
@@ -248,6 +295,39 @@ function memberTotal(member: Member): number {
     height: 100%;
     background: var(--color-primary);
     transition: width 0.2s;
+  }
+}
+
+.schedule {
+  display: grid;
+  gap: var(--space-4);
+
+  h3 {
+    margin: 0 0 var(--space-2);
+    color: var(--color-text-muted);
+    font-size: 13px;
+  }
+
+  ol {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    gap: var(--space-3);
+    font-size: 15px;
+  }
+
+  time {
+    flex: none;
+    width: 46px;
+    color: var(--color-primary);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
 }
 

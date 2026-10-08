@@ -1,22 +1,3 @@
-<script setup lang="ts">
-import menuIcon from '~/assets/icons/menu.svg'
-import tentIcon from '~/assets/icons/tent.svg'
-
-const route = useRoute()
-const campId = computed(() => {
-  const id = route.params.campId
-  return typeof id === 'string' ? id : null
-})
-
-const menuOpen = ref(false)
-watch(() => route.fullPath, () => (menuOpen.value = false))
-
-const menuItems = [
-  { to: '/', label: '전체 캠핑' },
-  { to: '/gear', label: '멤버·장비 등록' },
-]
-</script>
-
 <template>
   <div class="layout">
     <!-- 헤더의 backdrop-filter가 fixed 기준이 되지 않도록 밖에 둔다 -->
@@ -70,6 +51,25 @@ const menuItems = [
     </main>
   </div>
 </template>
+
+<script setup lang="ts">
+import menuIcon from '~/assets/icons/menu.svg'
+import tentIcon from '~/assets/icons/tent.svg'
+
+const route = useRoute()
+const campId = computed(() => {
+  const id = route.params.campId
+  return typeof id === 'string' ? id : null
+})
+
+const menuOpen = ref(false)
+watch(() => route.fullPath, () => (menuOpen.value = false))
+
+const menuItems = [
+  { to: '/', label: '전체 캠핑' },
+  { to: '/gear', label: '멤버·장비 등록' },
+]
+</script>
 
 <style scoped lang="scss">
 .layout {

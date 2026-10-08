@@ -1,12 +1,133 @@
+<template>
+  <article class="card person-card">
+    <header class="person-header">
+      <button type="button" class="toggle" :aria-expanded="open" @click="open = !open">
+        <span class="avatar">{{ person.name.slice(0, 1) }}</span>
+        <span class="title">
+          <strong class="name">{{ person.name }}</strong>
+          <span class="summary">
+            장비 {{ totalCount }}개<template v-if="!open && categorySummary"> · {{ categorySummary }}</template>
+          </span>
+        </span>
+        <span class="chevron" :class="{ open }" aria-hidden="true" />
+        <span class="sr-only">{{ open ? '숨기기' : '더보기' }}</span>
+      </button>
+    </header>
+
+    <div v-if="open" class="details">
+      <div class="person-actions">
+        <form v-if="editingName !== null" class="name-form" @submit.prevent="saveName">
+          <input v-model="editingName" class="input" type="text" maxlength="20" />
+          <button class="btn" type="submit">저장</button>
+        </form>
+        <template v-else>
+          <button class="btn btn-text" type="button" @click="editingName = person.name">이름 수정</button>
+          <button class="btn btn-text btn-danger" type="button" @click="removePerson">삭제</button>
+        </template>
+      </div>
+
+      <div v-if="groups.length" class="groups">
+        <section v-for="group in groups" :key="group.category" class="group">
+          <h3 class="group-label">
+            {{ group.label }}
+            <span class="group-count">{{ group.items.reduce((sum, e) => sum + e.quantity, 0) }}</span>
+          </h3>
+          <ul class="gear-list">
+            <li v-for="item in group.items" :key="item.id" class="gear-item">
+              <span class="gear-name">
+                {{ item.name }}
+                <SelectMenu
+                  v-if="sizeGuideOf(item.name)"
+                  class="size-select"
+                  size="sm"
+                  :model-value="item.size ?? null"
+                  :options="sizeOptions(item.name)"
+                  placeholder="크기 선택"
+                  aria-label="크기"
+                  @update:model-value="gear.setEquipmentSize(person.id, item.id, $event)"
+                />
+              </span>
+              <div class="stepper">
+                <button type="button" aria-label="하나 빼기" @click="decrease(item)">−</button>
+                <span>{{ item.quantity }}</span>
+                <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
+              </div>
+              <input
+                v-if="hasModelName(item.name)"
+                class="input model-input"
+                type="text"
+                maxlength="30"
+                :value="item.model ?? ''"
+                placeholder="텐트명 (예: 코베아 고스트)"
+                aria-label="텐트명"
+                @change="gear.setEquipmentModel(person.id, item.id, ($event.target as HTMLInputElement).value)"
+              />
+            </li>
+          </ul>
+        </section>
+      </div>
+      <p v-else class="empty">아래에서 가진 장비를 골라 주세요.</p>
+
+      <div class="presets">
+        <button
+          v-for="preset in EQUIPMENT_PRESETS"
+          :key="preset.name"
+          class="chip"
+          :class="{ active: sizingPreset?.name === preset.name }"
+          type="button"
+          @click="addPreset(preset)"
+        >
+          + {{ preset.name }}
+        </button>
+      </div>
+
+      <div v-if="sizingPreset && sizingGuide" class="size-picker">
+        <!-- 툴팁이 크기 칩을 가리지 않도록, 여기서는 기준을 칩에 바로 적는다. -->
+        <input
+          v-if="hasModelName(sizingPreset.name)"
+          v-model="sizingModel"
+          class="input model-input"
+          type="text"
+          maxlength="30"
+          :placeholder="`${sizingPreset.name}명 (선택, 예: 코베아 고스트)`"
+          :aria-label="`${sizingPreset.name}명`"
+        />
+        <div class="size-picker-title">{{ sizingPreset.name }} 크기를 골라 주세요</div>
+        <div class="size-options">
+          <button v-for="option in sizingGuide.options" :key="option.label" class="chip" type="button" @click="addWithSize(option.label)">
+            {{ option.label }}<small v-if="option.description">{{ option.description }}</small>
+          </button>
+        </div>
+      </div>
+
+      <form class="custom-form" @submit.prevent="addCustom">
+        <input v-model="form.name" class="input" type="text" placeholder="직접 입력" maxlength="30" />
+        <SelectMenu
+          :model-value="form.category"
+          :options="categoryOptions"
+          aria-label="카테고리"
+          @update:model-value="form.category = $event as EquipmentCategory"
+        />
+        <button class="btn" type="submit" :disabled="!form.name.trim()">추가</button>
+      </form>
+    </div>
+  </article>
+</template>
+
 <script setup lang="ts">
 import type { Equipment, EquipmentCategory, Person } from '~/types/camp'
+import type { SelectMenuOption } from '~/components/SelectMenu.vue'
 import { EQUIPMENT_CATEGORY_LABELS, EQUIPMENT_PRESETS, type EquipmentPreset } from '~/constants/equipment'
 
 const props = defineProps<{ person: Person; initiallyOpen?: boolean }>()
 const gear = useGearStore()
 
 const groups = computed(() => groupByCategory(props.person.equipments))
-const categoryOptions = Object.entries(EQUIPMENT_CATEGORY_LABELS) as [EquipmentCategory, string][]
+const categoryOptions: SelectMenuOption[] = Object.entries(EQUIPMENT_CATEGORY_LABELS).map(([value, label]) => ({ value, label }))
+
+function sizeOptions(name: string): SelectMenuOption[] {
+  return (sizeGuideOf(name)?.options ?? []).map((o) => ({ value: o.label, label: o.label, hint: o.description }))
+}
 
 const open = ref(props.initiallyOpen ?? false)
 // 다른 사람을 새로 추가하면 앞사람 카드는 접는다.
@@ -73,122 +194,6 @@ function removePerson() {
   gear.removePerson(props.person.id)
 }
 </script>
-
-<template>
-  <article class="card person-card">
-    <header class="person-header">
-      <button type="button" class="toggle" :aria-expanded="open" @click="open = !open">
-        <span class="avatar">{{ person.name.slice(0, 1) }}</span>
-        <span class="title">
-          <strong class="name">{{ person.name }}</strong>
-          <span class="summary">
-            장비 {{ totalCount }}개<template v-if="!open && categorySummary"> · {{ categorySummary }}</template>
-          </span>
-        </span>
-        <span class="chevron" :class="{ open }" aria-hidden="true" />
-        <span class="sr-only">{{ open ? '숨기기' : '더보기' }}</span>
-      </button>
-    </header>
-
-    <div v-if="open" class="details">
-      <div class="person-actions">
-        <form v-if="editingName !== null" class="name-form" @submit.prevent="saveName">
-          <input v-model="editingName" class="input" type="text" maxlength="20" />
-          <button class="btn" type="submit">저장</button>
-        </form>
-        <template v-else>
-          <button class="btn btn-text" type="button" @click="editingName = person.name">이름 수정</button>
-          <button class="btn btn-text btn-danger" type="button" @click="removePerson">삭제</button>
-        </template>
-      </div>
-
-      <div v-if="groups.length" class="groups">
-        <section v-for="group in groups" :key="group.category" class="group">
-          <h3 class="group-label">
-            {{ group.label }}
-            <span class="group-count">{{ group.items.reduce((sum, e) => sum + e.quantity, 0) }}</span>
-          </h3>
-          <ul class="gear-list">
-            <li v-for="item in group.items" :key="item.id" class="gear-item">
-              <span class="gear-name">
-                {{ item.name }}
-                <select
-                  v-if="sizeGuideOf(item.name)"
-                  class="size-select"
-                  :value="item.size ?? ''"
-                  aria-label="크기"
-                  @change="gear.setEquipmentSize(person.id, item.id, ($event.target as HTMLSelectElement).value)"
-                >
-                  <option value="" disabled>크기 선택</option>
-                  <option v-for="option in sizeGuideOf(item.name)!.options" :key="option.label" :value="option.label">
-                    {{ option.label }}
-                  </option>
-                </select>
-                <SizeGuideTooltip v-if="sizeGuideOf(item.name)" :guide="sizeGuideOf(item.name)!" />
-              </span>
-              <div class="stepper">
-                <button type="button" aria-label="하나 빼기" @click="decrease(item)">−</button>
-                <span>{{ item.quantity }}</span>
-                <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
-              </div>
-              <input
-                v-if="hasModelName(item.name)"
-                class="input model-input"
-                type="text"
-                maxlength="30"
-                :value="item.model ?? ''"
-                placeholder="텐트명 (예: 코베아 고스트)"
-                aria-label="텐트명"
-                @change="gear.setEquipmentModel(person.id, item.id, ($event.target as HTMLInputElement).value)"
-              />
-            </li>
-          </ul>
-        </section>
-      </div>
-      <p v-else class="empty">아래에서 가진 장비를 골라 주세요.</p>
-
-      <div class="presets">
-        <button
-          v-for="preset in EQUIPMENT_PRESETS"
-          :key="preset.name"
-          class="chip"
-          :class="{ active: sizingPreset?.name === preset.name }"
-          type="button"
-          @click="addPreset(preset)"
-        >
-          + {{ preset.name }}
-        </button>
-      </div>
-
-      <div v-if="sizingPreset && sizingGuide" class="size-picker">
-        <!-- 툴팁이 크기 칩을 가리지 않도록, 여기서는 기준을 칩에 바로 적는다. -->
-        <input
-          v-if="hasModelName(sizingPreset.name)"
-          v-model="sizingModel"
-          class="input model-input"
-          type="text"
-          maxlength="30"
-          :placeholder="`${sizingPreset.name}명 (선택, 예: 코베아 고스트)`"
-          :aria-label="`${sizingPreset.name}명`"
-        />
-        <div class="size-picker-title">{{ sizingPreset.name }} 크기를 골라 주세요</div>
-        <div class="size-options">
-          <button v-for="option in sizingGuide.options" :key="option.label" class="chip" type="button" @click="addWithSize(option.label)">
-            {{ option.label }}<small v-if="option.description">{{ option.description }}</small>
-          </button>
-        </div>
-      </div>
-
-      <form class="custom-form" @submit.prevent="addCustom">
-        <input v-model="form.name" class="input" type="text" placeholder="직접 입력" maxlength="30" />
-        <select v-model="form.category" class="input" aria-label="카테고리">
-          <option v-for="[value, label] in categoryOptions" :key="value" :value="value">{{ label }}</option>
-        </select>
-        <button class="btn" type="submit" :disabled="!form.name.trim()">추가</button>
-      </form>
-    </div>
-  </article>
-</template>
 
 <style scoped lang="scss">
 .person-card {
@@ -423,15 +428,7 @@ function removePerson() {
 }
 
 .size-select {
-  min-width: 0;
   margin-left: var(--space-1);
-  padding: 2px 4px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 13px;
 }
 
 .custom-form {

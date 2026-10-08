@@ -16,6 +16,11 @@
         </div>
         <NuxtLink class="btn btn-text" :to="`/camps/${route.params.campId}/info`">수정</NuxtLink>
       </div>
+      <div v-if="camp.place" class="place">
+        <strong>{{ camp.place.name || '캠핑장' }}</strong>
+        <p v-if="camp.place.address">{{ camp.place.address }}</p>
+        <PlaceMap :place="camp.place" />
+      </div>
       <dl class="stats">
         <div>
           <dt>멤버</dt>
@@ -232,6 +237,27 @@ function memberTotal(member: Member): number {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
   font-size: 14px;
+}
+
+.place {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+
+  strong {
+    display: block;
+    font-size: 15px;
+  }
+
+  p {
+    margin: 2px 0 0;
+    color: var(--color-text-muted);
+    font-size: 14px;
+  }
+
+  .place-map {
+    margin-top: var(--space-3);
+  }
 }
 
 .stats {

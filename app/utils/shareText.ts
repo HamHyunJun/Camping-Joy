@@ -13,6 +13,10 @@ export function buildShareText(camp: Camp): string {
   const lines: string[] = []
   const dday = formatDday(camp.date)
   lines.push(`⛺ ${camp.name || '이름 없는 캠핑'}`)
+  if (camp.place) {
+    const { name, address } = camp.place
+    lines.push(`📍 ${[name, address && (name ? `(${address})` : address)].filter(Boolean).join(' ')}`)
+  }
   lines.push(`📅 ${formatDate(camp.date)}${dday ? ` · ${dday}` : ''}`)
   lines.push(`👥 ${camp.members.map((m) => m.name).join(', ')} (${camp.members.length}명)`)
   const schedule = scheduleGroups(sortSchedule(camp.schedule ?? []))

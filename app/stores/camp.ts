@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Camp, Equipment, ID, Member, Person, ScheduleItem } from '~/types/camp'
+import type { Camp, CampPlace, Equipment, ID, Member, Person, ScheduleItem } from '~/types/camp'
 import { createId } from '~/utils/id'
 
 interface CampState {
@@ -13,6 +13,7 @@ interface CampState {
 
 export interface CampInfoInput {
   name: string
+  place: CampPlace
   date: string
 }
 
@@ -80,6 +81,8 @@ export const useCampStore = defineStore('camp', {
       const camp = this.currentCamp
       if (!camp) return
       camp.name = input.name.trim()
+      const place = { name: input.place.name.trim(), address: input.place.address.trim() }
+      camp.place = place.name || place.address ? place : undefined
       camp.date = input.date
       camp.updatedAt = now()
     },

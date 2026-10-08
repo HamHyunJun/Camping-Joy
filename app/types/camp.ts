@@ -74,10 +74,18 @@ export interface ScheduleItem {
   title: string
 }
 
+/** 캠핑장. 주소는 네이버 지도로 위치를 보여 줄 때 쓴다. */
+export interface CampPlace {
+  name: string
+  address: string
+}
+
 export interface Camp {
   id: ID
-  /** 캠핑장 이름 */
+  /** 캠핑 이름 (예: 10월 가평 캠핑). 예전 캠핑은 여기에 캠핑장 이름이 들어 있다. */
   name: string
+  /** 캠핑장 (이전에 저장된 캠핑에는 없을 수 있음) */
+  place?: CampPlace
   /** YYYY-MM-DD */
   date: string
   members: Member[]

@@ -13,6 +13,8 @@ export default defineNuxtConfig({
     public: {
       supabaseUrl: '',
       supabaseKey: '',
+      // 네이버 지도(NCP Maps) Client ID. 비어 있으면 지도 없이 '네이버 지도에서 보기' 링크만 보여 준다.
+      naverMapKeyId: '',
     },
   },
   css: ['~/assets/scss/main.scss'],

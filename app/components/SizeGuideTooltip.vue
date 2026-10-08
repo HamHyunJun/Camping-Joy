@@ -1,20 +1,3 @@
-<script setup lang="ts">
-import infoIcon from '~/assets/icons/info.svg'
-import type { EquipmentSizeGuide } from '~/constants/equipment'
-
-defineProps<{ guide: EquipmentSizeGuide }>()
-
-const open = ref(false)
-const root = ref<HTMLElement | null>(null)
-
-function onOutside(event: Event) {
-  if (root.value && !root.value.contains(event.target as Node)) open.value = false
-}
-
-onMounted(() => document.addEventListener('pointerdown', onOutside))
-onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside))
-</script>
-
 <template>
   <span ref="root" class="size-guide">
     <button
@@ -35,6 +18,23 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside))
     </span>
   </span>
 </template>
+
+<script setup lang="ts">
+import infoIcon from '~/assets/icons/info.svg'
+import type { EquipmentSizeGuide } from '~/constants/equipment'
+
+defineProps<{ guide: EquipmentSizeGuide }>()
+
+const open = ref(false)
+const root = ref<HTMLElement | null>(null)
+
+function onOutside(event: Event) {
+  if (root.value && !root.value.contains(event.target as Node)) open.value = false
+}
+
+onMounted(() => document.addEventListener('pointerdown', onOutside))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside))
+</script>
 
 <style scoped lang="scss">
 .size-guide {

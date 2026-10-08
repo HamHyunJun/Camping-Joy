@@ -1,25 +1,3 @@
-<script setup lang="ts">
-const store = useCampStore()
-const route = useRoute()
-
-const camp = computed(() => store.currentCamp)
-const form = reactive({
-  name: camp.value?.name ?? '',
-  date: camp.value?.date ?? '',
-})
-const submitted = ref(false)
-
-const nameError = computed(() => (form.name.trim() ? '' : '캠핑장 이름을 입력해 주세요.'))
-const dateError = computed(() => (form.date ? '' : '날짜를 선택해 주세요.'))
-
-function save() {
-  submitted.value = true
-  if (nameError.value || dateError.value) return
-  store.updateCampInfo({ name: form.name, date: form.date })
-  navigateTo(`/camps/${route.params.campId}/members`)
-}
-</script>
-
 <template>
   <section>
     <h1 class="page-title">캠핑 정보</h1>
@@ -52,3 +30,25 @@ function save() {
     </form>
   </section>
 </template>
+
+<script setup lang="ts">
+const store = useCampStore()
+const route = useRoute()
+
+const camp = computed(() => store.currentCamp)
+const form = reactive({
+  name: camp.value?.name ?? '',
+  date: camp.value?.date ?? '',
+})
+const submitted = ref(false)
+
+const nameError = computed(() => (form.name.trim() ? '' : '캠핑장 이름을 입력해 주세요.'))
+const dateError = computed(() => (form.date ? '' : '날짜를 선택해 주세요.'))
+
+function save() {
+  submitted.value = true
+  if (nameError.value || dateError.value) return
+  store.updateCampInfo({ name: form.name, date: form.date })
+  navigateTo(`/camps/${route.params.campId}/members`)
+}
+</script>

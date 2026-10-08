@@ -1,3 +1,62 @@
+<template>
+  <div class="backdrop" @click.self="emit('close')">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="결과 공유">
+      <header class="sheet-head">
+        <h2>결과 공유</h2>
+        <button class="btn btn-text" type="button" @click="emit('close')">닫기</button>
+      </header>
+
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" :aria-selected="mode === 'image'" @click="mode = 'image'">이미지</button>
+        <button type="button" role="tab" :aria-selected="mode === 'text'" @click="mode = 'text'">텍스트</button>
+      </div>
+
+      <div class="preview">
+        <!-- 이미지로 저장되는 카드. 한 화면에 들어오도록 멤버별로 장비를 칩으로 모은다. -->
+        <div v-show="mode === 'image'" ref="card" class="share-card">
+          <div class="share-top">
+            <span class="brand"><img :src="tentIcon" alt="" width="14" height="14" /> Camping&amp;Joy</span>
+            <strong class="share-name">{{ camp.name || '이름 없는 캠핑' }}</strong>
+            <span class="share-date">
+              {{ formatDate(camp.date) }}
+              <span v-if="dday" class="share-dday">{{ dday }}</span>
+            </span>
+            <span class="share-stats">멤버 {{ camp.members.length }}명 · 장비 {{ total }}개</span>
+          </div>
+          <ul class="share-members">
+            <li v-for="member in camp.members" :key="member.id">
+              <div class="share-member">
+                <span class="share-avatar">{{ member.name.slice(0, 1) }}</span>
+                <strong>{{ member.name }}</strong>
+                <small>{{ member.equipments.reduce((s, e) => s + e.quantity, 0) }}개</small>
+              </div>
+              <div class="share-items">
+                <span v-for="item in sortByCategory(member.equipments)" :key="item.id" class="share-item">
+                  {{ equipmentLabel(item) }}<b v-if="item.quantity > 1"> ×{{ item.quantity }}</b>
+                </span>
+                <span v-if="!member.equipments.length" class="share-none">챙길 장비 없음</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <pre v-show="mode === 'text'" class="share-text">{{ text }}</pre>
+      </div>
+
+      <div v-if="mode === 'image'" class="actions">
+        <button v-if="!native" class="btn" type="button" :disabled="busy" @click="saveImage">이미지 저장</button>
+        <button v-if="canShare" class="btn btn-primary" type="button" :disabled="busy" @click="shareImage">이미지 공유</button>
+      </div>
+      <div v-else class="actions">
+        <button v-if="!native" class="btn" type="button" @click="saveText">파일 저장</button>
+        <button class="btn" :class="{ 'btn-primary': !canShare }" type="button" @click="copyText">복사</button>
+        <button v-if="canShare" class="btn btn-primary" type="button" @click="shareText">공유</button>
+      </div>
+
+      <p v-if="toast" class="toast" role="status">{{ toast }}</p>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { Capacitor } from '@capacitor/core'
 import { Directory, Filesystem } from '@capacitor/filesystem'
@@ -131,65 +190,6 @@ function onKeydown(event: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onKeydown))
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 </script>
-
-<template>
-  <div class="backdrop" @click.self="emit('close')">
-    <div class="sheet" role="dialog" aria-modal="true" aria-label="결과 공유">
-      <header class="sheet-head">
-        <h2>결과 공유</h2>
-        <button class="btn btn-text" type="button" @click="emit('close')">닫기</button>
-      </header>
-
-      <div class="tabs" role="tablist">
-        <button type="button" role="tab" :aria-selected="mode === 'image'" @click="mode = 'image'">이미지</button>
-        <button type="button" role="tab" :aria-selected="mode === 'text'" @click="mode = 'text'">텍스트</button>
-      </div>
-
-      <div class="preview">
-        <!-- 이미지로 저장되는 카드. 한 화면에 들어오도록 멤버별로 장비를 칩으로 모은다. -->
-        <div v-show="mode === 'image'" ref="card" class="share-card">
-          <div class="share-top">
-            <span class="brand"><img :src="tentIcon" alt="" width="14" height="14" /> Camping&amp;Joy</span>
-            <strong class="share-name">{{ camp.name || '이름 없는 캠핑' }}</strong>
-            <span class="share-date">
-              {{ formatDate(camp.date) }}
-              <span v-if="dday" class="share-dday">{{ dday }}</span>
-            </span>
-            <span class="share-stats">멤버 {{ camp.members.length }}명 · 장비 {{ total }}개</span>
-          </div>
-          <ul class="share-members">
-            <li v-for="member in camp.members" :key="member.id">
-              <div class="share-member">
-                <span class="share-avatar">{{ member.name.slice(0, 1) }}</span>
-                <strong>{{ member.name }}</strong>
-                <small>{{ member.equipments.reduce((s, e) => s + e.quantity, 0) }}개</small>
-              </div>
-              <div class="share-items">
-                <span v-for="item in sortByCategory(member.equipments)" :key="item.id" class="share-item">
-                  {{ equipmentLabel(item) }}<b v-if="item.quantity > 1"> ×{{ item.quantity }}</b>
-                </span>
-                <span v-if="!member.equipments.length" class="share-none">챙길 장비 없음</span>
-              </div>
-            </li>
-          </ul>
-        </div>
-        <pre v-show="mode === 'text'" class="share-text">{{ text }}</pre>
-      </div>
-
-      <div v-if="mode === 'image'" class="actions">
-        <button v-if="!native" class="btn" type="button" :disabled="busy" @click="saveImage">이미지 저장</button>
-        <button v-if="canShare" class="btn btn-primary" type="button" :disabled="busy" @click="shareImage">이미지 공유</button>
-      </div>
-      <div v-else class="actions">
-        <button v-if="!native" class="btn" type="button" @click="saveText">파일 저장</button>
-        <button class="btn" :class="{ 'btn-primary': !canShare }" type="button" @click="copyText">복사</button>
-        <button v-if="canShare" class="btn btn-primary" type="button" @click="shareText">공유</button>
-      </div>
-
-      <p v-if="toast" class="toast" role="status">{{ toast }}</p>
-    </div>
-  </div>
-</template>
 
 <style scoped lang="scss">
 .backdrop {

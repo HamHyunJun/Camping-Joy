@@ -1,55 +1,3 @@
-<script setup lang="ts">
-import type { Equipment, ID, Member } from '~/types/camp'
-import { EQUIPMENT_CATEGORY_LABELS } from '~/constants/equipment'
-
-const store = useCampStore()
-const gear = useGearStore()
-const route = useRoute()
-
-const camp = computed(() => store.currentCamp)
-const members = computed(() => camp.value?.members ?? [])
-const view = ref<'equipment' | 'member'>('equipment')
-const sharing = ref(false)
-
-interface ResultRow {
-  key: string
-  member: Member
-  equipment: Equipment
-}
-
-const categoryOrder = Object.keys(EQUIPMENT_CATEGORY_LABELS)
-
-/** 장비별 표: 카테고리 → 장비 이름 순으로 정렬 */
-const rows = computed<ResultRow[]>(() =>
-  members.value
-    .flatMap((member) => member.equipments.map((equipment) => ({ key: `${member.id}:${equipment.id}`, member, equipment })))
-    .sort(
-      (a, b) =>
-        categoryOrder.indexOf(a.equipment.category) - categoryOrder.indexOf(b.equipment.category) ||
-        equipmentLabel(a.equipment).localeCompare(equipmentLabel(b.equipment), 'ko'),
-    ),
-)
-
-const totalQuantity = computed(() => rows.value.reduce((sum, row) => sum + row.equipment.quantity, 0))
-const readyCount = computed(() => rows.value.filter((row) => store.isReady(row.member.id, row.equipment.id)).length)
-
-/** 멤버들이 가졌지만 아무에게도 배분되지 않은 장비 */
-const unassigned = computed(() =>
-  members.value
-    .flatMap((m) => gear.findPerson(m.id)?.equipments ?? [])
-    .map((owned) => ({ owned, left: owned.quantity - store.assignedQuantity(owned.id) }))
-    .filter((item) => item.left > 0),
-)
-
-function ownerName(ownerId: ID): string {
-  return members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
-}
-
-function memberTotal(member: Member): number {
-  return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
-}
-</script>
-
 <template>
   <section v-if="camp">
     <div class="page-head">
@@ -189,6 +137,58 @@ function memberTotal(member: Member): number {
     <ShareSheet v-if="sharing" :camp="camp" @close="sharing = false" />
   </section>
 </template>
+
+<script setup lang="ts">
+import type { Equipment, ID, Member } from '~/types/camp'
+import { EQUIPMENT_CATEGORY_LABELS } from '~/constants/equipment'
+
+const store = useCampStore()
+const gear = useGearStore()
+const route = useRoute()
+
+const camp = computed(() => store.currentCamp)
+const members = computed(() => camp.value?.members ?? [])
+const view = ref<'equipment' | 'member'>('equipment')
+const sharing = ref(false)
+
+interface ResultRow {
+  key: string
+  member: Member
+  equipment: Equipment
+}
+
+const categoryOrder = Object.keys(EQUIPMENT_CATEGORY_LABELS)
+
+/** 장비별 표: 카테고리 → 장비 이름 순으로 정렬 */
+const rows = computed<ResultRow[]>(() =>
+  members.value
+    .flatMap((member) => member.equipments.map((equipment) => ({ key: `${member.id}:${equipment.id}`, member, equipment })))
+    .sort(
+      (a, b) =>
+        categoryOrder.indexOf(a.equipment.category) - categoryOrder.indexOf(b.equipment.category) ||
+        equipmentLabel(a.equipment).localeCompare(equipmentLabel(b.equipment), 'ko'),
+    ),
+)
+
+const totalQuantity = computed(() => rows.value.reduce((sum, row) => sum + row.equipment.quantity, 0))
+const readyCount = computed(() => rows.value.filter((row) => store.isReady(row.member.id, row.equipment.id)).length)
+
+/** 멤버들이 가졌지만 아무에게도 배분되지 않은 장비 */
+const unassigned = computed(() =>
+  members.value
+    .flatMap((m) => gear.findPerson(m.id)?.equipments ?? [])
+    .map((owned) => ({ owned, left: owned.quantity - store.assignedQuantity(owned.id) }))
+    .filter((item) => item.left > 0),
+)
+
+function ownerName(ownerId: ID): string {
+  return members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
+}
+
+function memberTotal(member: Member): number {
+  return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
+}
+</script>
 
 <style scoped lang="scss">
 .share-button {

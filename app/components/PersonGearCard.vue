@@ -1,79 +1,3 @@
-<script setup lang="ts">
-import type { Equipment, EquipmentCategory, Person } from '~/types/camp'
-import { EQUIPMENT_CATEGORY_LABELS, EQUIPMENT_PRESETS, type EquipmentPreset } from '~/constants/equipment'
-
-const props = defineProps<{ person: Person; initiallyOpen?: boolean }>()
-const gear = useGearStore()
-
-const groups = computed(() => groupByCategory(props.person.equipments))
-const categoryOptions = Object.entries(EQUIPMENT_CATEGORY_LABELS) as [EquipmentCategory, string][]
-
-const open = ref(props.initiallyOpen ?? false)
-// 다른 사람을 새로 추가하면 앞사람 카드는 접는다.
-watch(
-  () => props.initiallyOpen,
-  (value) => (open.value = value ?? false),
-)
-const totalCount = computed(() => props.person.equipments.reduce((sum, e) => sum + e.quantity, 0))
-/** 접힌 상태에서 보여줄 카테고리별 개수 */
-const categorySummary = computed(() =>
-  groups.value.map((group) => `${group.label} ${group.items.reduce((sum, e) => sum + e.quantity, 0)}`).join(' · '),
-)
-
-const editingName = ref<string | null>(null)
-const form = reactive<{ name: string; category: EquipmentCategory; quantity: number }>({
-  name: '',
-  category: 'etc',
-  quantity: 1,
-})
-
-/** 크기를 골라야 하는 장비를 눌렀을 때 크기 선택을 연다. */
-const sizingPreset = ref<EquipmentPreset | null>(null)
-/** 텐트처럼 이름을 적을 수 있는 장비를 추가할 때 함께 적는 이름 */
-const sizingModel = ref('')
-const sizingGuide = computed(() => (sizingPreset.value ? sizeGuideOf(sizingPreset.value.name) : undefined))
-
-function addPreset(preset: EquipmentPreset) {
-  if (sizeGuideOf(preset.name)) {
-    sizingPreset.value = sizingPreset.value?.name === preset.name ? null : preset
-    sizingModel.value = ''
-    return
-  }
-  gear.addEquipment(props.person.id, { ...preset, quantity: 1 })
-}
-
-function addWithSize(size: string) {
-  if (!sizingPreset.value) return
-  gear.addEquipment(props.person.id, { ...sizingPreset.value, quantity: 1, size, model: sizingModel.value })
-  sizingPreset.value = null
-  sizingModel.value = ''
-}
-
-function addCustom() {
-  if (!form.name.trim()) return
-  gear.addEquipment(props.person.id, { ...form, quantity: Math.max(1, form.quantity) })
-  form.name = ''
-  form.quantity = 1
-}
-
-function decrease(item: Equipment) {
-  if (item.quantity <= 1 && !confirm(`${equipmentLabel(item)}을(를) 목록에서 삭제할까요?`)) return
-  gear.setEquipmentQuantity(props.person.id, item.id, item.quantity - 1)
-}
-
-function saveName() {
-  if (editingName.value !== null) gear.renamePerson(props.person.id, editingName.value)
-  editingName.value = null
-}
-
-function removePerson() {
-  const campCount = useCampStore().countCampsWithPerson(props.person.id)
-  const extra = campCount ? `\n멤버로 들어간 캠핑 ${campCount}곳에서도 빠지고, 챙길 장비도 함께 빠져요.` : ''
-  if (!confirm(`${props.person.name}님과 등록된 장비를 모두 삭제할까요?${extra}`)) return
-  gear.removePerson(props.person.id)
-}
-</script>
-
 <template>
   <article class="card person-card">
     <header class="person-header">
@@ -189,6 +113,82 @@ function removePerson() {
     </div>
   </article>
 </template>
+
+<script setup lang="ts">
+import type { Equipment, EquipmentCategory, Person } from '~/types/camp'
+import { EQUIPMENT_CATEGORY_LABELS, EQUIPMENT_PRESETS, type EquipmentPreset } from '~/constants/equipment'
+
+const props = defineProps<{ person: Person; initiallyOpen?: boolean }>()
+const gear = useGearStore()
+
+const groups = computed(() => groupByCategory(props.person.equipments))
+const categoryOptions = Object.entries(EQUIPMENT_CATEGORY_LABELS) as [EquipmentCategory, string][]
+
+const open = ref(props.initiallyOpen ?? false)
+// 다른 사람을 새로 추가하면 앞사람 카드는 접는다.
+watch(
+  () => props.initiallyOpen,
+  (value) => (open.value = value ?? false),
+)
+const totalCount = computed(() => props.person.equipments.reduce((sum, e) => sum + e.quantity, 0))
+/** 접힌 상태에서 보여줄 카테고리별 개수 */
+const categorySummary = computed(() =>
+  groups.value.map((group) => `${group.label} ${group.items.reduce((sum, e) => sum + e.quantity, 0)}`).join(' · '),
+)
+
+const editingName = ref<string | null>(null)
+const form = reactive<{ name: string; category: EquipmentCategory; quantity: number }>({
+  name: '',
+  category: 'etc',
+  quantity: 1,
+})
+
+/** 크기를 골라야 하는 장비를 눌렀을 때 크기 선택을 연다. */
+const sizingPreset = ref<EquipmentPreset | null>(null)
+/** 텐트처럼 이름을 적을 수 있는 장비를 추가할 때 함께 적는 이름 */
+const sizingModel = ref('')
+const sizingGuide = computed(() => (sizingPreset.value ? sizeGuideOf(sizingPreset.value.name) : undefined))
+
+function addPreset(preset: EquipmentPreset) {
+  if (sizeGuideOf(preset.name)) {
+    sizingPreset.value = sizingPreset.value?.name === preset.name ? null : preset
+    sizingModel.value = ''
+    return
+  }
+  gear.addEquipment(props.person.id, { ...preset, quantity: 1 })
+}
+
+function addWithSize(size: string) {
+  if (!sizingPreset.value) return
+  gear.addEquipment(props.person.id, { ...sizingPreset.value, quantity: 1, size, model: sizingModel.value })
+  sizingPreset.value = null
+  sizingModel.value = ''
+}
+
+function addCustom() {
+  if (!form.name.trim()) return
+  gear.addEquipment(props.person.id, { ...form, quantity: Math.max(1, form.quantity) })
+  form.name = ''
+  form.quantity = 1
+}
+
+function decrease(item: Equipment) {
+  if (item.quantity <= 1 && !confirm(`${equipmentLabel(item)}을(를) 목록에서 삭제할까요?`)) return
+  gear.setEquipmentQuantity(props.person.id, item.id, item.quantity - 1)
+}
+
+function saveName() {
+  if (editingName.value !== null) gear.renamePerson(props.person.id, editingName.value)
+  editingName.value = null
+}
+
+function removePerson() {
+  const campCount = useCampStore().countCampsWithPerson(props.person.id)
+  const extra = campCount ? `\n멤버로 들어간 캠핑 ${campCount}곳에서도 빠지고, 챙길 장비도 함께 빠져요.` : ''
+  if (!confirm(`${props.person.name}님과 등록된 장비를 모두 삭제할까요?${extra}`)) return
+  gear.removePerson(props.person.id)
+}
+</script>
 
 <style scoped lang="scss">
 .person-card {

@@ -1,51 +1,3 @@
-<script setup lang="ts">
-import tentIcon from '~/assets/icons/tent.svg'
-import trashIcon from '~/assets/icons/trash.svg'
-import type { Camp } from '~/types/camp'
-
-const store = useCampStore()
-const gear = useGearStore()
-
-// 정보를 입력하지 않고 나온 빈 캠핑은 목록에 남기지 않는다.
-store.removeEmptyDrafts()
-
-const gearCount = computed(() => gear.people.reduce((sum, p) => sum + p.equipments.length, 0))
-
-const camps = computed(() =>
-  store.sortedCamps.map((camp) => ({ camp, progress: campProgress(camp), dday: formatDday(camp.date) })),
-)
-
-// 이 기기를 쓰는 사람. 고르면 그 사람이 멤버인 캠핑을 따로 모아 보여 준다.
-const me = computed(() => (store.meId ? gear.findPerson(store.meId) ?? null : null))
-const choosingMe = ref(false)
-const myCamps = computed(() => (me.value ? camps.value.filter(({ camp }) => camp.members.some((m) => m.id === me.value?.id)) : []))
-const sections = computed(() => [
-  ...(me.value ? [{ key: 'mine', title: `내가 참여한 캠핑 ${myCamps.value.length}개`, items: myCamps.value, empty: '아직 참여한 캠핑이 없어요.' }] : []),
-  { key: 'all', title: `전체 캠핑 ${camps.value.length}개`, items: camps.value, empty: '' },
-])
-
-function chooseMe(event: Event) {
-  const value = (event.target as HTMLSelectElement).value
-  store.meId = value || null
-  choosingMe.value = false
-}
-
-function startNewCamp() {
-  const campId = store.createCamp()
-  navigateTo(`/camps/${campId}/info`)
-}
-
-function removeCamp(camp: Camp) {
-  if (!confirm(`'${camp.name || '이름 없는 캠핑'}'을(를) 삭제할까요?\n모든 사람의 전체 캠핑에서 지워져요.`)) return
-  store.deleteCamp(camp.id)
-}
-
-function dateParts(date: string): { month: string; day: string } {
-  const [, month = '', day = ''] = date.split('-')
-  return { month: `${Number(month)}월`, day: String(Number(day)) }
-}
-</script>
-
 <template>
   <section>
     <div class="hero">
@@ -130,6 +82,54 @@ function dateParts(date: string): { month: string; day: string } {
     </div>
   </section>
 </template>
+
+<script setup lang="ts">
+import tentIcon from '~/assets/icons/tent.svg'
+import trashIcon from '~/assets/icons/trash.svg'
+import type { Camp } from '~/types/camp'
+
+const store = useCampStore()
+const gear = useGearStore()
+
+// 정보를 입력하지 않고 나온 빈 캠핑은 목록에 남기지 않는다.
+store.removeEmptyDrafts()
+
+const gearCount = computed(() => gear.people.reduce((sum, p) => sum + p.equipments.length, 0))
+
+const camps = computed(() =>
+  store.sortedCamps.map((camp) => ({ camp, progress: campProgress(camp), dday: formatDday(camp.date) })),
+)
+
+// 이 기기를 쓰는 사람. 고르면 그 사람이 멤버인 캠핑을 따로 모아 보여 준다.
+const me = computed(() => (store.meId ? gear.findPerson(store.meId) ?? null : null))
+const choosingMe = ref(false)
+const myCamps = computed(() => (me.value ? camps.value.filter(({ camp }) => camp.members.some((m) => m.id === me.value?.id)) : []))
+const sections = computed(() => [
+  ...(me.value ? [{ key: 'mine', title: `내가 참여한 캠핑 ${myCamps.value.length}개`, items: myCamps.value, empty: '아직 참여한 캠핑이 없어요.' }] : []),
+  { key: 'all', title: `전체 캠핑 ${camps.value.length}개`, items: camps.value, empty: '' },
+])
+
+function chooseMe(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  store.meId = value || null
+  choosingMe.value = false
+}
+
+function startNewCamp() {
+  const campId = store.createCamp()
+  navigateTo(`/camps/${campId}/info`)
+}
+
+function removeCamp(camp: Camp) {
+  if (!confirm(`'${camp.name || '이름 없는 캠핑'}'을(를) 삭제할까요?\n모든 사람의 전체 캠핑에서 지워져요.`)) return
+  store.deleteCamp(camp.id)
+}
+
+function dateParts(date: string): { month: string; day: string } {
+  const [, month = '', day = ''] = date.split('-')
+  return { month: `${Number(month)}월`, day: String(Number(day)) }
+}
+</script>
 
 <style scoped lang="scss">
 .hero {

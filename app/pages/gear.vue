@@ -1,46 +1,3 @@
-<script setup lang="ts">
-import searchIcon from '~/assets/icons/search.svg'
-
-const gear = useGearStore()
-
-const query = ref('')
-const adding = ref(false)
-const newName = ref('')
-const error = ref('')
-const lastAddedId = ref<string | null>(null)
-const nameInput = ref<HTMLInputElement | null>(null)
-
-const keyword = computed(() => query.value.trim())
-const filteredPeople = computed(() =>
-  keyword.value ? gear.people.filter((p) => p.name.includes(keyword.value)) : gear.people,
-)
-
-async function openAdd() {
-  adding.value = true
-  error.value = ''
-  await nextTick()
-  nameInput.value?.focus()
-}
-
-function closeAdd() {
-  adding.value = false
-  newName.value = ''
-  error.value = ''
-}
-
-function addPerson(name: string) {
-  const trimmed = name.trim()
-  if (!trimmed) return
-  if (gear.findPersonByName(trimmed)) {
-    error.value = '이미 등록된 이름이에요.'
-    return
-  }
-  lastAddedId.value = gear.addPerson(trimmed)?.id ?? null
-  query.value = ''
-  closeAdd()
-}
-</script>
-
 <template>
   <section>
     <div class="hero">
@@ -108,6 +65,49 @@ function addPerson(name: string) {
     </div>
   </section>
 </template>
+
+<script setup lang="ts">
+import searchIcon from '~/assets/icons/search.svg'
+
+const gear = useGearStore()
+
+const query = ref('')
+const adding = ref(false)
+const newName = ref('')
+const error = ref('')
+const lastAddedId = ref<string | null>(null)
+const nameInput = ref<HTMLInputElement | null>(null)
+
+const keyword = computed(() => query.value.trim())
+const filteredPeople = computed(() =>
+  keyword.value ? gear.people.filter((p) => p.name.includes(keyword.value)) : gear.people,
+)
+
+async function openAdd() {
+  adding.value = true
+  error.value = ''
+  await nextTick()
+  nameInput.value?.focus()
+}
+
+function closeAdd() {
+  adding.value = false
+  newName.value = ''
+  error.value = ''
+}
+
+function addPerson(name: string) {
+  const trimmed = name.trim()
+  if (!trimmed) return
+  if (gear.findPersonByName(trimmed)) {
+    error.value = '이미 등록된 이름이에요.'
+    return
+  }
+  lastAddedId.value = gear.addPerson(trimmed)?.id ?? null
+  query.value = ''
+  closeAdd()
+}
+</script>
 
 <style scoped lang="scss">
 .hero {

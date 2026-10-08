@@ -28,7 +28,9 @@
   --space-8: 32px;
 
   --header-height: 60px;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  // 안드로이드 앱은 Capacitor가 --safe-area-inset-* 값을 넣어 준다 (오래된 WebView는 env()가 0이라서).
+  // 아이폰 앱과 브라우저는 env() 값을 쓴다.
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   --content-max: 760px;
 }

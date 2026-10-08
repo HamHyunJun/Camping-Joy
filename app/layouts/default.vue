@@ -49,6 +49,8 @@
     <main class="content" :class="{ wide: route.meta.wide }">
       <slot />
     </main>
+    <!-- 갤럭시 하단 내비게이션 바·아이폰 홈 바 뒤로 목록이 비쳐 보이지 않게 배경을 깐다 -->
+    <div class="bottom-safe" aria-hidden="true" />
   </div>
 </template>
 
@@ -169,6 +171,17 @@ const menuItems = [
   @include pc {
     display: none !important;
   }
+}
+
+.bottom-safe {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 25;
+  height: var(--safe-bottom);
+  background: var(--color-bg);
+  pointer-events: none;
 }
 
 .menu-backdrop {

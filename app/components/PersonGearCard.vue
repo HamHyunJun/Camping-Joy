@@ -36,18 +36,16 @@
             <li v-for="item in group.items" :key="item.id" class="gear-item">
               <span class="gear-name">
                 {{ item.name }}
-                <select
+                <SelectMenu
                   v-if="sizeGuideOf(item.name)"
                   class="size-select"
-                  :value="item.size ?? ''"
+                  size="sm"
+                  :model-value="item.size ?? null"
+                  :options="sizeOptions(item.name)"
+                  placeholder="크기 선택"
                   aria-label="크기"
-                  @change="gear.setEquipmentSize(person.id, item.id, ($event.target as HTMLSelectElement).value)"
-                >
-                  <option value="" disabled>크기 선택</option>
-                  <option v-for="option in sizeGuideOf(item.name)!.options" :key="option.label" :value="option.label">
-                    {{ option.label }}
-                  </option>
-                </select>
+                  @update:model-value="gear.setEquipmentSize(person.id, item.id, $event)"
+                />
                 <SizeGuideTooltip v-if="sizeGuideOf(item.name)" :guide="sizeGuideOf(item.name)!" />
               </span>
               <div class="stepper">
@@ -105,9 +103,12 @@
 
       <form class="custom-form" @submit.prevent="addCustom">
         <input v-model="form.name" class="input" type="text" placeholder="직접 입력" maxlength="30" />
-        <select v-model="form.category" class="input" aria-label="카테고리">
-          <option v-for="[value, label] in categoryOptions" :key="value" :value="value">{{ label }}</option>
-        </select>
+        <SelectMenu
+          :model-value="form.category"
+          :options="categoryOptions"
+          aria-label="카테고리"
+          @update:model-value="form.category = $event as EquipmentCategory"
+        />
         <button class="btn" type="submit" :disabled="!form.name.trim()">추가</button>
       </form>
     </div>
@@ -116,13 +117,18 @@
 
 <script setup lang="ts">
 import type { Equipment, EquipmentCategory, Person } from '~/types/camp'
+import type { SelectMenuOption } from '~/components/SelectMenu.vue'
 import { EQUIPMENT_CATEGORY_LABELS, EQUIPMENT_PRESETS, type EquipmentPreset } from '~/constants/equipment'
 
 const props = defineProps<{ person: Person; initiallyOpen?: boolean }>()
 const gear = useGearStore()
 
 const groups = computed(() => groupByCategory(props.person.equipments))
-const categoryOptions = Object.entries(EQUIPMENT_CATEGORY_LABELS) as [EquipmentCategory, string][]
+const categoryOptions: SelectMenuOption[] = Object.entries(EQUIPMENT_CATEGORY_LABELS).map(([value, label]) => ({ value, label }))
+
+function sizeOptions(name: string): SelectMenuOption[] {
+  return (sizeGuideOf(name)?.options ?? []).map((o) => ({ value: o.label, label: o.label, hint: o.description }))
+}
 
 const open = ref(props.initiallyOpen ?? false)
 // 다른 사람을 새로 추가하면 앞사람 카드는 접는다.
@@ -423,15 +429,7 @@ function removePerson() {
 }
 
 .size-select {
-  min-width: 0;
   margin-left: var(--space-1);
-  padding: 2px 4px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 13px;
 }
 
 .custom-form {

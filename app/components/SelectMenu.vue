@@ -11,7 +11,7 @@
       <span class="select-value" :class="{ placeholder: !selected }">{{ selected?.label ?? placeholder }}</span>
       <span class="select-chevron" aria-hidden="true">›</span>
     </button>
-    <ul v-if="open" class="select-options" :class="{ up: dropUp }" role="listbox" :aria-label="ariaLabel">
+    <ul v-if="open" ref="list" class="select-options" :class="{ up: dropUp }" role="listbox" :aria-label="ariaLabel">
       <li v-for="option in options" :key="option.value">
         <button
           type="button"
@@ -55,6 +55,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const open = ref(false)
 const root = ref<HTMLElement | null>(null)
+const list = ref<HTMLElement | null>(null)
 const selected = computed(() => props.options.find((o) => o.value === props.modelValue))
 /** 아래 공간이 모자라면 위로 펼친다. */
 const dropUp = ref(false)
@@ -66,6 +67,8 @@ function toggle() {
     dropUp.value = below < 240 && rect.top > below
   }
   open.value = !open.value
+  // 옵션이 많을 때 고른 항목이 보이게 스크롤한다.
+  if (open.value) nextTick(() => list.value?.querySelector('.selected')?.scrollIntoView({ block: 'center' }))
 }
 
 function choose(value: string) {

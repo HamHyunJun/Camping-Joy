@@ -23,6 +23,12 @@
             </span>
             <span class="share-stats">멤버 {{ camp.members.length }}명 · 장비 {{ total }}개</span>
           </div>
+          <div v-if="schedule.length" class="share-schedule">
+            <div v-for="group in schedule" :key="group.day">
+              <small v-if="schedule.length > 1 || group.day > 1">{{ group.day }}일차 · {{ formatDayDate(camp.date, group.day) }}</small>
+              <p v-for="item in group.items" :key="item.id"><b>{{ item.time }}</b> {{ item.title }}</p>
+            </div>
+          </div>
           <ul class="share-members">
             <li v-for="member in camp.members" :key="member.id">
               <div class="share-member">
@@ -75,6 +81,7 @@ const toast = ref('')
 
 const text = computed(() => buildShareText(props.camp))
 const dday = computed(() => formatDday(props.camp.date))
+const schedule = computed(() => scheduleGroups(sortSchedule(props.camp.schedule ?? [])))
 // 한글 파일 이름을 'download'로 바꿔 버리는 브라우저가 있어 영문으로 짓는다.
 const fileName = computed(() => `camping-joy-${props.camp.date}`)
 const total = computed(() => props.camp.members.reduce((sum, m) => sum + m.equipments.reduce((s, e) => s + e.quantity, 0), 0))
@@ -366,6 +373,34 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   margin-top: 4px;
   font-size: 13px;
   opacity: 0.85;
+}
+
+.share-schedule {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+  font-size: 13px;
+
+  small {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  b {
+    display: inline-block;
+    width: 40px;
+    color: var(--color-primary);
+  }
 }
 
 .share-members {

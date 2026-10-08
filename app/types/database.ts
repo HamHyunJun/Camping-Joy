@@ -1,4 +1,4 @@
-import type { Assignment, EquipmentCategory, Member, RequiredEquipment } from '~/types/camp'
+import type { Assignment, EquipmentCategory, Member, RequiredEquipment, ScheduleItem } from '~/types/camp'
 
 // supabase/migrations 의 테이블을 supabase-js에 알려 주는 타입 (supabase gen types 형식을 손으로 맞춤)
 type Table<Row, Insert> = { Row: Row; Insert: Insert; Update: Partial<Insert>; Relationships: [] }
@@ -35,6 +35,8 @@ export type CampData = {
   requiredEquipments: RequiredEquipment[]
   assignments: Assignment[]
   readyItems: string[]
+  /** 예전 캠핑에는 없을 수 있다 */
+  schedule?: ScheduleItem[]
 }
 
 export interface Database {

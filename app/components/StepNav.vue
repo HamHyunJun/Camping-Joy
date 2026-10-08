@@ -36,7 +36,10 @@ function canVisit(path: CampStep['path']): boolean {
 }
 
 function isDone(path: CampStep['path']): boolean {
-  return path !== 'result' && store.currentCamp ? isStepComplete(store.currentCamp, path) : false
+  if (!store.currentCamp || path === 'result') return false
+  // 일정은 하나라도 적었을 때만 완료로 보여 준다.
+  if (path === 'schedule') return Boolean(store.currentCamp.schedule?.length)
+  return isStepComplete(store.currentCamp, path)
 }
 
 const currentIndex = computed(() =>

@@ -35,6 +35,25 @@
       </div>
     </article>
 
+    <!-- 일정 -->
+    <section v-if="schedule.length" class="block">
+      <div class="block-head">
+        <h2>일정</h2>
+        <NuxtLink class="btn btn-text" :to="`/camps/${route.params.campId}/schedule`">수정</NuxtLink>
+      </div>
+      <div class="card schedule">
+        <div v-for="group in scheduleByDay" :key="group.day" class="schedule-day">
+          <h3 v-if="scheduleByDay.length > 1 || group.day > 1">{{ group.day }}일차 · {{ formatDayDate(camp.date, group.day) }}</h3>
+          <ol>
+            <li v-for="item in group.items" :key="item.id">
+              <time>{{ item.time }}</time>
+              <span>{{ item.title }}</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
     <!-- 멤버 -->
     <section class="block">
       <div class="block-head">
@@ -148,6 +167,8 @@ const route = useRoute()
 
 const camp = computed(() => store.currentCamp)
 const members = computed(() => camp.value?.members ?? [])
+const schedule = computed(() => sortSchedule(camp.value?.schedule ?? []))
+const scheduleByDay = computed(() => scheduleGroups(schedule.value))
 const view = ref<'equipment' | 'member'>('equipment')
 const sharing = ref(false)
 
@@ -248,6 +269,39 @@ function memberTotal(member: Member): number {
     height: 100%;
     background: var(--color-primary);
     transition: width 0.2s;
+  }
+}
+
+.schedule {
+  display: grid;
+  gap: var(--space-4);
+
+  h3 {
+    margin: 0 0 var(--space-2);
+    color: var(--color-text-muted);
+    font-size: 13px;
+  }
+
+  ol {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    gap: var(--space-3);
+    font-size: 15px;
+  }
+
+  time {
+    flex: none;
+    width: 46px;
+    color: var(--color-primary);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
 }
 

@@ -64,6 +64,16 @@ export interface Assignment {
   status: AssignmentStatus
 }
 
+/** 캠핑 일정표 한 줄. 예: 1일차 11:00 집합 */
+export interface ScheduleItem {
+  id: ID
+  /** 몇째 날인지 (1부터). 캠핑 날짜가 1일차 */
+  day: number
+  /** 'HH:MM' */
+  time: string
+  title: string
+}
+
 export interface Camp {
   id: ID
   /** 캠핑장 이름 */
@@ -75,6 +85,8 @@ export interface Camp {
   assignments: Assignment[]
   /** 준비 완료로 체크한 담당 장비. `${memberId}:${equipmentId}` 형식 (이전에 저장된 캠핑에는 없을 수 있음) */
   readyItems?: string[]
+  /** 시간별 일정표 (이전에 저장된 캠핑에는 없을 수 있음) */
+  schedule?: ScheduleItem[]
   /** 서버에 올라간 적이 있는지. 서버에 없는데 true면 다른 사람이 지운 캠핑이다. */
   synced?: boolean
   createdAt: string

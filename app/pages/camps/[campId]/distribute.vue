@@ -122,10 +122,10 @@
 
     <div class="page-actions">
       <NuxtLink class="btn" :to="`/camps/${route.params.campId}/members`">이전</NuxtLink>
-      <NuxtLink v-if="shared.length" class="btn btn-primary" :to="`/camps/${route.params.campId}/result`">
-        다음: 결과 보기
+      <NuxtLink v-if="shared.length" class="btn btn-primary" :to="`/camps/${route.params.campId}/schedule`">
+        다음: 일정 짜기
       </NuxtLink>
-      <button v-else class="btn btn-primary" type="button" disabled>다음: 결과 보기</button>
+      <button v-else class="btn btn-primary" type="button" disabled>다음: 일정 짜기</button>
     </div>
   </section>
 </template>

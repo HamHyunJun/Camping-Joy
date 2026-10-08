@@ -40,8 +40,16 @@ export const useCampStore = defineStore('camp', {
   getters: {
     currentCamp: (state): Camp | null =>
       state.camps.find((camp) => camp.id === state.currentCampId) ?? null,
-    sortedCamps: (state): Camp[] =>
-      [...state.camps].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    /** 오늘이나 앞으로 갈 캠핑. 가까운 날짜가 먼저 */
+    upcomingCamps: (state): Camp[] =>
+      state.camps
+        .filter((c) => c.date >= today())
+        .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt)),
+    /** 날짜가 지난 캠핑. 최근 날짜가 먼저 */
+    pastCamps: (state): Camp[] =>
+      state.camps
+        .filter((c) => c.date < today())
+        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
   },
   actions: {
     // 캠핑

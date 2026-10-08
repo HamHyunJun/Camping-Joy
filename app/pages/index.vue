@@ -5,7 +5,7 @@
         <h1 class="page-title">전체 캠핑</h1>
         <p class="hero-desc">모임의 캠핑을 함께 보고, 누가 무엇을 챙길지 정리해요.</p>
       </div>
-      <button class="btn btn-primary" type="button" @click="startNewCamp">+ 새 캠핑</button>
+      <button v-if="camps.length" class="btn btn-primary" type="button" @click="startNewCamp">+ 새 캠핑</button>
     </div>
 
     <NuxtLink to="/gear" class="card gear-link">
@@ -105,10 +105,15 @@ const camps = computed(() => store.upcomingCamps)
 const me = computed(() => (store.meId ? gear.findPerson(store.meId) ?? null : null))
 const choosingMe = ref(false)
 const myCamps = computed(() => (me.value ? camps.value.filter((camp) => camp.members.some((m) => m.id === me.value?.id)) : []))
-const sections = computed(() => [
-  ...(me.value ? [{ key: 'mine', title: `내가 참여한 캠핑 ${myCamps.value.length}개`, items: myCamps.value, empty: '아직 참여한 캠핑이 없어요.' }] : []),
-  { key: 'all', title: `다가올 캠핑 ${camps.value.length}개`, items: camps.value, empty: '' },
-])
+// 내 캠핑을 골랐으면 아래 목록에서는 빼서 같은 캠핑이 두 번 보이지 않게 한다.
+const otherCamps = computed(() => camps.value.filter((camp) => !myCamps.value.includes(camp)))
+const sections = computed(() => {
+  if (!me.value) return [{ key: 'all', title: `다가올 캠핑 ${camps.value.length}개`, items: camps.value, empty: '' }]
+  return [
+    { key: 'mine', title: `내가 참여한 캠핑 ${myCamps.value.length}개`, items: myCamps.value, empty: '아직 참여한 캠핑이 없어요.' },
+    ...(otherCamps.value.length ? [{ key: 'others', title: `다른 캠핑 ${otherCamps.value.length}개`, items: otherCamps.value, empty: '' }] : []),
+  ]
+})
 
 function chooseMe(personId: string | null) {
   store.meId = personId

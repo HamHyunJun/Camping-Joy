@@ -11,3 +11,10 @@ dist
 .DS_Store
 *.log
 supabase/.temp
+
+# 로컬 도구/에이전트 산출물
+.omc/
+.agents/
+.claude/
+graphify-out/
+skills-lock.json

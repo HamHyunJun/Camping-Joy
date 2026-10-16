@@ -14,7 +14,12 @@ export default defineNuxtPlugin(() => {
   type PersonInsert = Omit<PersonRow, 'created_at'>
   type EquipmentInsert = Omit<EquipmentRow, 'created_at'>
 
-  function toRows(people: Person[]) {
+  interface GearRows {
+    persons: PersonInsert[]
+    equipments: EquipmentInsert[]
+  }
+
+  const toRows = (people: Person[]): GearRows => {
     const persons: PersonInsert[] = people.map((p) => ({ id: p.id, name: p.name.slice(0, 20) }))
     const equipments: EquipmentInsert[] = people.flatMap((p) =>
       p.equipments.map((e) => ({
@@ -30,18 +35,18 @@ export default defineNuxtPlugin(() => {
     return { persons, equipments }
   }
 
-  function keyed<T extends { id: string }>(rows: T[]): Map<string, string> {
+  const keyed = <T extends { id: string }>(rows: T[]): Map<string, string> => {
     return new Map(rows.map((row) => [row.id, JSON.stringify(row)]))
   }
 
   /** 서버와 마지막으로 맞춘 내용 */
   let baseline = { persons: new Map<string, string>(), equipments: new Map<string, string>() }
   let ready = false
-  let pushing: Promise<void> | null = null
-  let pushTimer: ReturnType<typeof setTimeout> | null = null
-  let refreshTimer: ReturnType<typeof setTimeout> | null = null
+  let pushing: Promise<void> | undefined
+  let pushTimer: ReturnType<typeof setTimeout> | undefined
+  let refreshTimer: ReturnType<typeof setTimeout> | undefined
 
-  async function fetchPeople(): Promise<Person[]> {
+  const fetchPeople = async (): Promise<Person[]> => {
     const [persons, equipments] = await Promise.all([
       db.from('people').select('*').order('created_at').order('name'),
       db.from('equipments').select('*').order('created_at').order('name'),
@@ -65,13 +70,13 @@ export default defineNuxtPlugin(() => {
     }))
   }
 
-  function apply(people: Person[]) {
+  const apply = (people: Person[]): void => {
     const rows = toRows(people)
     baseline = { persons: keyed(rows.persons), equipments: keyed(rows.equipments) }
     if (JSON.stringify(people) !== JSON.stringify(gear.people)) gear.replacePeople(people)
   }
 
-  async function push() {
+  const push = async (): Promise<void> => {
     const rows = toRows(gear.people)
     const persons = rows.persons.filter((r) => baseline.persons.get(r.id) !== JSON.stringify(r))
     const equipments = rows.equipments.filter((r) => baseline.equipments.get(r.id) !== JSON.stringify(r))
@@ -102,20 +107,20 @@ export default defineNuxtPlugin(() => {
     baseline = { persons: keyed(rows.persons), equipments: keyed(rows.equipments) }
   }
 
-  function schedulePush() {
+  const schedulePush = (): void => {
     if (!ready) return
     if (pushTimer) clearTimeout(pushTimer)
     pushTimer = setTimeout(() => {
-      pushTimer = null
+      pushTimer = undefined
       pushing = push()
         .catch(() => {
           // 인터넷이 안 되면 다음에 고칠 때 다시 올린다.
         })
-        .finally(() => (pushing = null))
+        .finally(() => (pushing = undefined))
     }, 600)
   }
 
-  async function refresh() {
+  const refresh = async (): Promise<void> => {
     // 이 기기에서 고친 내용을 올리는 중이면 끝난 뒤에 받는다.
     if (pushTimer || pushing) {
       await pushing
@@ -128,12 +133,12 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  function scheduleRefresh() {
+  const scheduleRefresh = (): void => {
     if (refreshTimer) clearTimeout(refreshTimer)
     refreshTimer = setTimeout(refresh, 300)
   }
 
-  async function start() {
+  const start = async (): Promise<void> => {
     try {
       let people = await fetchPeople()
       // 처음 연결한 기기는 그동안 기기에만 있던 등록을 서버 목록에 더한다(같은 이름은 서버 것을 쓴다).

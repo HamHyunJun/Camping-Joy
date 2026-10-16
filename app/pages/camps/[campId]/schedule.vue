@@ -25,7 +25,7 @@
         @click="currentDay = day"
       >
         <strong>{{ day }}일차</strong>
-        <small>{{ formatDayDate(camp.date, day) }}</small>
+        <small>{{ format.formatDayDate(camp.date, day) }}</small>
       </button>
       <button type="button" class="day-tab add-day" @click="addDay">+ 하루 추가</button>
     </div>
@@ -88,59 +88,56 @@
 
 <script setup lang="ts">
 import type { SelectMenuOption } from '~/components/SelectMenu.vue'
-
-const SCHEDULE_PRESETS = ['집합', '출발', '입실', '텐트 치기', '점심', '저녁', '불멍', '취침', '아침', '정리', '퇴실']
+import format from '~/utils/format'
 
 const store = useCampStore()
 const route = useRoute()
-const camp = computed(() => store.currentCamp)
 
+const SCHEDULE_PRESETS = ['집합', '출발', '입실', '텐트 치기', '점심', '저녁', '불멍', '취침', '아침', '정리', '퇴실']
 /** 30분 단위 시간 */
 const timeOptions: SelectMenuOption[] = Array.from({ length: 48 }, (_, i) => {
   const time = `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`
   return { value: time, label: time }
 })
-
 // 일정이 없는 날도 탭으로 보여 줄 수 있게, 추가한 날 수를 따로 기억한다.
 const addedDays = ref(1)
+const currentDay = ref(1)
+const form = reactive({ time: '11:00', title: '' })
+const titleInput = ref<HTMLInputElement>()
+
+const camp = computed(() => store.currentCamp)
 const days = computed(() => {
   const last = Math.max(addedDays.value, ...(camp.value?.schedule ?? []).map((s) => s.day))
   return Array.from({ length: last }, (_, i) => i + 1)
 })
-const currentDay = ref(1)
-const dayItems = computed(() => sortSchedule((camp.value?.schedule ?? []).filter((s) => s.day === currentDay.value)))
-
-const form = reactive({ time: '11:00', title: '' })
-const titleInput = ref<HTMLInputElement | null>(null)
+const dayItems = computed(() => format.sortSchedule((camp.value?.schedule ?? []).filter((s) => s.day === currentDay.value)))
 
 /** 그날 마지막 일정 한 시간 뒤를 기본 시간으로 */
-function nextTime(): string {
+const nextTime = (): string => {
   const last = dayItems.value[dayItems.value.length - 1]
   if (!last) return currentDay.value === 1 ? '11:00' : '08:00'
   const hour = Math.min(Number(last.time.slice(0, 2)) + 1, 23)
   return `${String(hour).padStart(2, '0')}:${last.time.slice(3)}`
 }
 
-watch(currentDay, () => (form.time = nextTime()), { immediate: true })
-
-function addItem() {
+const addItem = (): void => {
   if (!form.title.trim()) return
   store.addScheduleItem({ day: currentDay.value, time: form.time, title: form.title })
   form.title = ''
   form.time = nextTime()
 }
 
-function pickPreset(preset: string) {
+const pickPreset = (preset: string): void => {
   form.title = preset
   titleInput.value?.focus()
 }
 
-function addDay() {
+const addDay = (): void => {
   addedDays.value = days.value.length + 1
   currentDay.value = addedDays.value
 }
 
-function removeDay() {
+const removeDay = (): void => {
   const day = currentDay.value
   const count = dayItems.value.length
   if (count && !confirm(`${day}일차 일정 ${count}개를 모두 지울까요?`)) return
@@ -148,6 +145,8 @@ function removeDay() {
   addedDays.value = Math.max(1, addedDays.value - 1)
   currentDay.value = Math.max(1, day - 1)
 }
+
+watch(currentDay, () => (form.time = nextTime()), { immediate: true })
 </script>
 
 <style scoped lang="scss">

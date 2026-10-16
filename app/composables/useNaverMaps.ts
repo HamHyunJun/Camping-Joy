@@ -28,7 +28,7 @@ interface GeocodeResponse {
   v2: { addresses: GeocodeAddress[] }
 }
 
-interface NaverMapsApi {
+export interface NaverMapsApi {
   LatLng: new (lat: number, lng: number) => NaverLatLng
   Map: new (
     element: HTMLElement,
@@ -50,15 +50,9 @@ declare global {
   }
 }
 
-let loading: Promise<NaverMapsApi> | null = null
+let loading: Promise<NaverMapsApi> | undefined
 
-/** 네이버 지도 키(NUXT_PUBLIC_NAVER_MAP_KEY_ID)가 있는지. 없으면 지도 대신 '네이버 지도에서 보기' 링크만 쓴다. */
-export function hasNaverMapKey(): boolean {
-  return Boolean(useRuntimeConfig().public.naverMapKeyId)
-}
-
-/** 네이버 지도 스크립트를 한 번만 불러온다. 주소 → 좌표 변환(geocoder)까지 준비되면 끝난다. */
-export function loadNaverMaps(): Promise<NaverMapsApi> {
+const loadNaverMaps = (): Promise<NaverMapsApi> => {
   if (loading) return loading
   const keyId = useRuntimeConfig().public.naverMapKeyId
   loading = new Promise<NaverMapsApi>((resolve, reject) => {
@@ -76,24 +70,36 @@ export function loadNaverMaps(): Promise<NaverMapsApi> {
     }
     document.head.appendChild(script)
   })
-  loading.catch(() => (loading = null))
+  loading.catch(() => (loading = undefined))
   return loading
 }
 
-/** 주소를 좌표로 바꾼다. 찾지 못하면 null */
-export async function geocodeAddress(address: string): Promise<NaverLatLng | null> {
-  const maps = await loadNaverMaps()
-  return new Promise((resolve) => {
-    maps.Service?.geocode({ query: address }, (status, response) => {
-      const found = status === maps.Service?.Status.OK ? response.v2.addresses[0] : undefined
-      resolve(found ? new maps.LatLng(Number(found.y), Number(found.x)) : null)
-    })
-  })
-}
+export default {
+  /** 네이버 지도 키(NUXT_PUBLIC_NAVER_MAP_KEY_ID)가 있는지. 없으면 지도 대신 '네이버 지도에서 보기' 링크만 쓴다. */
+  hasNaverMapKey(): boolean {
+    return Boolean(useRuntimeConfig().public.naverMapKeyId)
+  },
 
-/** 네이버 지도에서 주소나 장소 이름을 검색한다. 앱에서는 네이버 지도 앱(없으면 브라우저)으로 넘긴다. */
-export function openNaverMap(query: string) {
-  const url = `https://map.naver.com/p/search/${encodeURIComponent(query)}`
-  if (Capacitor.isNativePlatform()) window.location.href = url
-  else window.open(url, '_blank', 'noopener')
+  /** 네이버 지도 스크립트를 한 번만 불러온다. 주소 → 좌표 변환(geocoder)까지 준비되면 끝난다. */
+  loadNaverMaps(): Promise<NaverMapsApi> {
+    return loadNaverMaps()
+  },
+
+  /** 주소를 좌표로 바꾼다. 찾지 못하면 undefined */
+  async geocodeAddress(address: string): Promise<NaverLatLng | undefined> {
+    const maps = await loadNaverMaps()
+    return new Promise((resolve) => {
+      maps.Service?.geocode({ query: address }, (status, response) => {
+        const found = status === maps.Service?.Status.OK ? response.v2.addresses[0] : undefined
+        resolve(found ? new maps.LatLng(Number(found.y), Number(found.x)) : undefined)
+      })
+    })
+  },
+
+  /** 네이버 지도에서 주소나 장소 이름을 검색한다. 앱에서는 네이버 지도 앱(없으면 브라우저)으로 넘긴다. */
+  openNaverMap(query: string): void {
+    const url = `https://map.naver.com/p/search/${encodeURIComponent(query)}`
+    if (Capacitor.isNativePlatform()) window.location.href = url
+    else window.open(url, '_blank', 'noopener')
+  },
 }

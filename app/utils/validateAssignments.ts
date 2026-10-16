@@ -7,4 +7,6 @@ export interface ValidateInput {
 }
 
 /** 배분 결과 점검 (보유 여부 / 과부하 / 중복 / 누락). 6단계에서 구현한다. */
-export type ValidateAssignments = (input: ValidateInput) => AssignmentIssue[]
+export interface ValidateAssignments {
+  (input: ValidateInput): AssignmentIssue[]
+}

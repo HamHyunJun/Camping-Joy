@@ -4,7 +4,7 @@
 **Generated:** 2026-10-12 · **Updated:** 2026-10-12
 
 ## Purpose
-외부 서비스 연결을 감싸는 함수. Nuxt가 자동 import 한다(`useSupabase()`, `loadNaverMaps()` 등). 둘 다 키가 없으면 기능을 끄는 방식이라 환경 변수 없이도 앱이 동작한다.
+외부 서비스 연결을 감싸는 함수. `useSupabase()`는 Nuxt가 자동 import 하고, `useNaverMaps.ts`는 default 객체(`naverMaps.geocodeAddress(...)` 등)를 명시 import 해서 쓴다. 둘 다 키가 없으면 기능을 끄는 방식이라 환경 변수 없이도 앱이 동작한다.
 
 ## Key Files
 | File | Description |

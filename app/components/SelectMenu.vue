@@ -33,6 +33,19 @@
 </template>
 
 <script setup lang="ts">
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string
+    options: SelectMenuOption[]
+    placeholder?: string
+    ariaLabel?: string
+    /** sm: 목록 줄 안에 들어가는 작은 크기 */
+    size?: 'sm' | 'md'
+  }>(),
+  { modelValue: undefined, placeholder: '선택', ariaLabel: undefined, size: 'md' },
+)
+const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+
 export interface SelectMenuOption {
   value: string
   label: string
@@ -40,27 +53,18 @@ export interface SelectMenuOption {
   hint?: string
 }
 
-const props = withDefaults(
-  defineProps<{
-    modelValue: string | null
-    options: SelectMenuOption[]
-    placeholder?: string
-    ariaLabel?: string
-    /** sm: 목록 줄 안에 들어가는 작은 크기 */
-    size?: 'sm' | 'md'
-  }>(),
-  { placeholder: '선택', ariaLabel: undefined, size: 'md' },
-)
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
-
 const open = ref(false)
-const root = ref<HTMLElement | null>(null)
-const list = ref<HTMLElement | null>(null)
-const selected = computed(() => props.options.find((o) => o.value === props.modelValue))
+const root = ref<HTMLElement>()
+const list = ref<HTMLElement>()
 /** 아래 공간이 모자라면 위로 펼친다. */
 const dropUp = ref(false)
 
-function toggle() {
+onMounted(() => document.addEventListener('pointerdown', closeOnOutside))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside))
+
+const selected = computed(() => props.options.find((o) => o.value === props.modelValue))
+
+const toggle = (): void => {
   if (!open.value && root.value) {
     const rect = root.value.getBoundingClientRect()
     const below = window.innerHeight - rect.bottom
@@ -71,17 +75,15 @@ function toggle() {
   if (open.value) nextTick(() => list.value?.querySelector('.selected')?.scrollIntoView({ block: 'center' }))
 }
 
-function choose(value: string) {
+const choose = (value: string): void => {
   emit('update:modelValue', value)
   open.value = false
 }
 
 // 목록 밖을 누르면 닫는다.
-function closeOnOutside(event: PointerEvent) {
+const closeOnOutside = (event: PointerEvent): void => {
   if (open.value && !root.value?.contains(event.target as Node)) open.value = false
 }
-onMounted(() => document.addEventListener('pointerdown', closeOnOutside))
-onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside))
 </script>
 
 <style scoped lang="scss">

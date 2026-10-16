@@ -18,14 +18,14 @@
             <span class="brand"><img :src="tentIcon" alt="" width="14" height="14" /> Camping&amp;Joy</span>
             <strong class="share-name">{{ camp.name || '이름 없는 캠핑' }}</strong>
             <span class="share-date">
-              {{ formatDate(camp.date) }}
+              {{ format.formatDate(camp.date) }}
               <span v-if="dday" class="share-dday">{{ dday }}</span>
             </span>
             <span class="share-stats">멤버 {{ camp.members.length }}명 · 장비 {{ total }}개</span>
           </div>
           <div v-if="schedule.length" class="share-schedule">
             <div v-for="group in schedule" :key="group.day">
-              <small v-if="schedule.length > 1 || group.day > 1">{{ group.day }}일차 · {{ formatDayDate(camp.date, group.day) }}</small>
+              <small v-if="schedule.length > 1 || group.day > 1">{{ group.day }}일차 · {{ format.formatDayDate(camp.date, group.day) }}</small>
               <p v-for="item in group.items" :key="item.id"><b>{{ item.time }}</b> {{ item.title }}</p>
             </div>
           </div>
@@ -37,8 +37,8 @@
                 <small>{{ member.equipments.reduce((s, e) => s + e.quantity, 0) }}개</small>
               </div>
               <div class="share-items">
-                <span v-for="item in sortByCategory(member.equipments)" :key="item.id" class="share-item">
-                  {{ equipmentLabel(item) }}<b v-if="item.quantity > 1"> ×{{ item.quantity }}</b>
+                <span v-for="item in shareTextUtil.sortByCategory(member.equipments)" :key="item.id" class="share-item">
+                  {{ equipmentLabel.equipmentLabel(item) }}<b v-if="item.quantity > 1"> ×{{ item.quantity }}</b>
                 </span>
                 <span v-if="!member.equipments.length" class="share-none">챙길 장비 없음</span>
               </div>
@@ -70,38 +70,43 @@ import { Share } from '@capacitor/share'
 import { toBlob } from 'html-to-image'
 import tentIcon from '~/assets/icons/tent.svg'
 import type { Camp } from '~/types/camp'
+import equipmentLabel from '~/utils/equipmentLabel'
+import format from '~/utils/format'
+import shareTextUtil from '~/utils/shareText'
 
 const props = defineProps<{ camp: Camp }>()
 const emit = defineEmits<{ close: [] }>()
 
 const mode = ref<'image' | 'text'>('image')
-const card = ref<HTMLElement | null>(null)
+const card = ref<HTMLElement>()
 const busy = ref(false)
 const toast = ref('')
-
-const text = computed(() => buildShareText(props.camp))
-const dday = computed(() => formatDday(props.camp.date))
-const schedule = computed(() => scheduleGroups(sortSchedule(props.camp.schedule ?? [])))
-// 한글 파일 이름을 'download'로 바꿔 버리는 브라우저가 있어 영문으로 짓는다.
-const fileName = computed(() => `camping-joy-${props.camp.date}`)
-const total = computed(() => props.camp.members.reduce((sum, m) => sum + m.equipments.reduce((s, e) => s + e.quantity, 0), 0))
-
 /** 안드로이드/iOS 앱(웹뷰) 안인지. 웹뷰는 다운로드 링크와 Web Share를 못 쓰므로 앱 공유 창을 쓴다. */
 const native = Capacitor.isNativePlatform()
 const canShare = native || (typeof navigator !== 'undefined' && typeof navigator.share === 'function')
 
-function showToast(message: string) {
+onMounted(() => document.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
+
+const text = computed(() => shareTextUtil.buildShareText(props.camp))
+const dday = computed(() => format.formatDday(props.camp.date))
+const schedule = computed(() => format.scheduleGroups(format.sortSchedule(props.camp.schedule ?? [])))
+// 한글 파일 이름을 'download'로 바꿔 버리는 브라우저가 있어 영문으로 짓는다.
+const fileName = computed(() => `camping-joy-${props.camp.date}`)
+const total = computed(() => props.camp.members.reduce((sum, m) => sum + m.equipments.reduce((s, e) => s + e.quantity, 0), 0))
+
+const showToast = (message: string): void => {
   toast.value = message
   setTimeout(() => (toast.value = ''), 1800)
 }
 
-async function makeImage(): Promise<Blob | null> {
-  if (!card.value) return null
+const makeImage = async (): Promise<Blob | undefined> => {
+  if (!card.value) return undefined
   // 화면 밀도와 상관없이 메신저에서 선명하게 보이도록 2배로 그린다.
-  return toBlob(card.value, { pixelRatio: 2, backgroundColor: '#f3f5f1' })
+  return (await toBlob(card.value, { pixelRatio: 2, backgroundColor: '#f3f5f1' })) ?? undefined
 }
 
-function download(blob: Blob, name: string) {
+const download = (blob: Blob, name: string): void => {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -113,27 +118,26 @@ function download(blob: Blob, name: string) {
 }
 
 /** 공유 창을 닫은 경우는 실패가 아니다. */
-function isAbort(error: unknown): boolean {
+const isAbort = (error: unknown): boolean => {
   if (error instanceof DOMException) return error.name === 'AbortError'
   return error instanceof Error && /cancel/i.test(error.message)
 }
 
-function toBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
+const toBase64 = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '')
     reader.onerror = () => reject(reader.error)
     reader.readAsDataURL(blob)
   })
-}
 
 /** 앱에서는 이미지를 캐시에 써 두고 휴대폰 공유 창으로 넘긴다. 공유 창에서 저장도 할 수 있다. */
-async function shareFileNative(blob: Blob, name: string) {
+const shareFileNative = async (blob: Blob, name: string): Promise<void> => {
   const { uri } = await Filesystem.writeFile({ path: name, data: await toBase64(blob), directory: Directory.Cache })
   await Share.share({ files: [uri], title: props.camp.name })
 }
 
-async function saveImage() {
+const saveImage = async (): Promise<void> => {
   busy.value = true
   try {
     const blob = await makeImage()
@@ -145,7 +149,7 @@ async function saveImage() {
   }
 }
 
-async function shareImage() {
+const shareImage = async (): Promise<void> => {
   busy.value = true
   try {
     const blob = await makeImage()
@@ -169,7 +173,7 @@ async function shareImage() {
   }
 }
 
-async function copyText() {
+const copyText = async (): Promise<void> => {
   try {
     await navigator.clipboard.writeText(text.value)
     showToast('복사했어요.')
@@ -178,7 +182,7 @@ async function copyText() {
   }
 }
 
-async function shareText() {
+const shareText = async (): Promise<void> => {
   try {
     if (native) await Share.share({ text: text.value })
     else await navigator.share({ text: text.value })
@@ -187,15 +191,13 @@ async function shareText() {
   }
 }
 
-function saveText() {
+const saveText = (): void => {
   download(new Blob([text.value], { type: 'text/plain;charset=utf-8' }), `${fileName.value}.txt`)
 }
 
-function onKeydown(event: KeyboardEvent) {
+const onKeydown = (event: KeyboardEvent): void => {
   if (event.key === 'Escape') emit('close')
 }
-onMounted(() => document.addEventListener('keydown', onKeydown))
-onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
 <style scoped lang="scss">

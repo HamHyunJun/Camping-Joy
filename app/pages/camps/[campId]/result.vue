@@ -12,7 +12,7 @@
       <div class="summary-head">
         <div>
           <h2 class="camp-name">{{ camp.name || '이름 없는 캠핑' }}</h2>
-          <p class="camp-date">{{ formatDate(camp.date) }}</p>
+          <p class="camp-date">{{ format.formatDate(camp.date) }}</p>
         </div>
         <NuxtLink class="btn btn-text" :to="`/camps/${route.params.campId}/info`">수정</NuxtLink>
       </div>
@@ -48,7 +48,7 @@
       </div>
       <div class="card schedule">
         <div v-for="group in scheduleByDay" :key="group.day" class="schedule-day">
-          <h3 v-if="scheduleByDay.length > 1 || group.day > 1">{{ group.day }}일차 · {{ formatDayDate(camp.date, group.day) }}</h3>
+          <h3 v-if="scheduleByDay.length > 1 || group.day > 1">{{ group.day }}일차 · {{ format.formatDayDate(camp.date, group.day) }}</h3>
           <ol>
             <li v-for="item in group.items" :key="item.id">
               <time>{{ item.time }}</time>
@@ -99,7 +99,7 @@
           <tbody>
             <tr v-for="row in rows" :key="row.key" :class="{ ready: store.isReady(row.member.id, row.equipment.id) }">
               <td>
-                {{ equipmentLabel(row.equipment) }}
+                {{ equipmentLabel.equipmentLabel(row.equipment) }}
                 <small class="sub">{{ EQUIPMENT_CATEGORY_LABELS[row.equipment.category] }}</small>
               </td>
               <td>
@@ -121,7 +121,7 @@
         <article v-for="member in members" :key="member.id" class="card">
           <h3 class="member-name">{{ member.name }} <small>{{ memberTotal(member) }}개</small></h3>
           <p v-if="!member.equipments.length" class="muted">맡은 장비가 없어요.</p>
-          <div v-for="group in groupByCategory(member.equipments)" :key="group.category" class="group">
+          <div v-for="group in groupByCategory.groupByCategory(member.equipments)" :key="group.category" class="group">
             <h4 class="group-label">{{ group.label }}</h4>
             <ul class="plain-list">
               <li v-for="item in group.items" :key="item.id" :class="{ ready: store.isReady(member.id, item.id) }">
@@ -131,7 +131,7 @@
                     :checked="store.isReady(member.id, item.id)"
                     @change="store.toggleReady(member.id, item.id)"
                   />
-                  {{ equipmentLabel(item) }} × {{ item.quantity }}
+                  {{ equipmentLabel.equipmentLabel(item) }} × {{ item.quantity }}
                   <small v-if="item.ownerId !== member.id" class="sub">{{ ownerName(item.ownerId) }} 장비</small>
                 </label>
               </li>
@@ -148,7 +148,7 @@
       </div>
       <ul class="card plain-list leftover">
         <li v-for="{ owned, left } in unassigned" :key="owned.id">
-          {{ equipmentLabel(owned) }} <small class="sub">{{ ownerName(owned.ownerId) }} · {{ left }}개</small>
+          {{ equipmentLabel.equipmentLabel(owned) }} <small class="sub">{{ ownerName(owned.ownerId) }} · {{ left }}개</small>
         </li>
       </ul>
     </section>
@@ -165,17 +165,13 @@
 <script setup lang="ts">
 import type { Equipment, ID, Member } from '~/types/camp'
 import { EQUIPMENT_CATEGORY_LABELS } from '~/constants/equipment'
+import equipmentLabel from '~/utils/equipmentLabel'
+import format from '~/utils/format'
+import groupByCategory from '~/utils/groupByCategory'
 
 const store = useCampStore()
 const gear = useGearStore()
 const route = useRoute()
-
-const camp = computed(() => store.currentCamp)
-const members = computed(() => camp.value?.members ?? [])
-const schedule = computed(() => sortSchedule(camp.value?.schedule ?? []))
-const scheduleByDay = computed(() => scheduleGroups(schedule.value))
-const view = ref<'equipment' | 'member'>('equipment')
-const sharing = ref(false)
 
 interface ResultRow {
   key: string
@@ -184,7 +180,13 @@ interface ResultRow {
 }
 
 const categoryOrder = Object.keys(EQUIPMENT_CATEGORY_LABELS)
+const view = ref<'equipment' | 'member'>('equipment')
+const sharing = ref(false)
 
+const camp = computed(() => store.currentCamp)
+const members = computed(() => camp.value?.members ?? [])
+const schedule = computed(() => format.sortSchedule(camp.value?.schedule ?? []))
+const scheduleByDay = computed(() => format.scheduleGroups(schedule.value))
 /** 장비별 표: 카테고리 → 장비 이름 순으로 정렬 */
 const rows = computed<ResultRow[]>(() =>
   members.value
@@ -192,13 +194,11 @@ const rows = computed<ResultRow[]>(() =>
     .sort(
       (a, b) =>
         categoryOrder.indexOf(a.equipment.category) - categoryOrder.indexOf(b.equipment.category) ||
-        equipmentLabel(a.equipment).localeCompare(equipmentLabel(b.equipment), 'ko'),
+        equipmentLabel.equipmentLabel(a.equipment).localeCompare(equipmentLabel.equipmentLabel(b.equipment), 'ko'),
     ),
 )
-
 const totalQuantity = computed(() => rows.value.reduce((sum, row) => sum + row.equipment.quantity, 0))
 const readyCount = computed(() => rows.value.filter((row) => store.isReady(row.member.id, row.equipment.id)).length)
-
 /** 멤버들이 가졌지만 아무에게도 배분되지 않은 장비 */
 const unassigned = computed(() =>
   members.value
@@ -207,13 +207,10 @@ const unassigned = computed(() =>
     .filter((item) => item.left > 0),
 )
 
-function ownerName(ownerId: ID): string {
-  return members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
-}
+const ownerName = (ownerId: ID): string =>
+  members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
 
-function memberTotal(member: Member): number {
-  return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
-}
+const memberTotal = (member: Member): number => member.equipments.reduce((sum, e) => sum + e.quantity, 0)
 </script>
 
 <style scoped lang="scss">

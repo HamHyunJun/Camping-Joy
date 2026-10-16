@@ -4,7 +4,7 @@
 **Generated:** 2026-10-12 · **Updated:** 2026-10-12
 
 ## Purpose
-상태가 없는 순수 함수. Nuxt가 자동 import 하므로 페이지·컴포넌트·스토어에서 import 없이 쓴다(스토어에서는 명시 import 하기도 함).
+상태가 없는 순수 함수. 파일마다 `export default { ... }` 객체로 내보내므로 쓰는 곳에서 명시 import 한다(예: `import format from '~/utils/format'` → `format.formatDate(...)`).
 
 ## Key Files
 | File | Description |
@@ -23,7 +23,7 @@
 
 ### Working In This Directory
 - 여기에는 순수 함수만 둔다. 스토어·DOM·네트워크 접근 금지.
-- 자동 import는 export 이름 기준이라 전역 이름 충돌에 주의한다.
+- 같은 파일 안에서 서로 부르는 함수는 파일 위쪽에 `const fn = (): T => ...` 화살표 함수로 두고, default 객체의 메서드가 이를 호출한다.
 - 날짜 문자열은 `` new Date(`${date}T00:00:00`) ``로 로컬 자정 기준으로 파싱한다 (UTC 파싱 방지).
 - 카테고리 순서는 `EQUIPMENT_CATEGORY_LABELS`의 키 순서를 따른다.
 - `distribute.ts`/`validateAssignments.ts`/`equipmentMatch.ts`는 예전 `Assignment` 설계용 미완성 코드다. 자동 배분·점검을 구현하려면 현재 데이터 모델(`Member.equipments`)에 맞출지 먼저 결정한다.

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Equipment, EquipmentCategory, ID, Person } from '~/types/camp'
-import { createId } from '~/utils/id'
+import idUtil from '~/utils/id'
 
 interface GearState {
   people: Person[]
@@ -29,16 +29,16 @@ export const useGearStore = defineStore('gear', {
       state.people.find((p) => p.name === name.trim()),
   },
   actions: {
-    addPerson(name: string): Person | null {
+    addPerson(name: string): Person | undefined {
       const trimmed = name.trim()
-      if (!trimmed) return null
+      if (!trimmed) return undefined
       const existing = this.findPersonByName(trimmed)
       if (existing) return existing
-      const person: Person = { id: createId(), name: trimmed, equipments: [] }
+      const person: Person = { id: idUtil.createId(), name: trimmed, equipments: [] }
       this.people.push(person)
       return person
     },
-    renamePerson(personId: ID, name: string) {
+    renamePerson(personId: ID, name: string): void {
       const person = this.findPerson(personId)
       const trimmed = name.trim()
       if (!person || !trimmed) return
@@ -46,7 +46,7 @@ export const useGearStore = defineStore('gear', {
       useCampStore().syncMemberName(personId, trimmed)
     },
     /** 서버의 등록 목록으로 바꾼다. 다른 기기에서 바뀐 이름·장비를 이 기기의 캠핑에도 맞춘다. */
-    replacePeople(next: Person[]) {
+    replacePeople(next: Person[]): void {
       const camps = useCampStore()
       for (const person of this.people) {
         if (!next.some((p) => p.id === person.id)) camps.removePersonFromCamps(person.id)
@@ -61,15 +61,15 @@ export const useGearStore = defineStore('gear', {
       }
       this.people = next
     },
-    removePerson(personId: ID) {
+    removePerson(personId: ID): void {
       this.people = this.people.filter((p) => p.id !== personId)
       useCampStore().removePersonFromCamps(personId)
     },
 
-    addEquipment(personId: ID, input: EquipmentInput): Equipment | null {
+    addEquipment(personId: ID, input: EquipmentInput): Equipment | undefined {
       const person = this.findPerson(personId)
       const name = input.name.trim()
-      if (!person || !name || input.quantity < 1) return null
+      if (!person || !name || input.quantity < 1) return undefined
       const model = input.model?.trim() || undefined
       // 같은 이름·카테고리·크기·모델명 장비가 이미 있으면 수량만 늘린다.
       const same = person.equipments.find(
@@ -80,7 +80,7 @@ export const useGearStore = defineStore('gear', {
         return same
       }
       const equipment: Equipment = {
-        id: createId(),
+        id: idUtil.createId(),
         name,
         category: input.category,
         quantity: input.quantity,
@@ -92,7 +92,7 @@ export const useGearStore = defineStore('gear', {
       return equipment
     },
     /** 크기를 바꾼다. 같은 크기의 장비가 이미 있으면 하나로 합친다. */
-    setEquipmentSize(personId: ID, equipmentId: ID, size: string) {
+    setEquipmentSize(personId: ID, equipmentId: ID, size: string): void {
       const person = this.findPerson(personId)
       const equipment = person?.equipments.find((e) => e.id === equipmentId)
       if (!person || !equipment) return
@@ -114,7 +114,7 @@ export const useGearStore = defineStore('gear', {
       useCampStore().syncOwnerEquipments(personId, person.equipments)
     },
     /** 이름(모델명)을 바꾼다. 비우면 지운다. */
-    setEquipmentModel(personId: ID, equipmentId: ID, model: string) {
+    setEquipmentModel(personId: ID, equipmentId: ID, model: string): void {
       const person = this.findPerson(personId)
       const equipment = person?.equipments.find((e) => e.id === equipmentId)
       if (!person || !equipment) return
@@ -123,7 +123,7 @@ export const useGearStore = defineStore('gear', {
       else delete equipment.model
       useCampStore().syncOwnerEquipments(personId, person.equipments)
     },
-    setEquipmentQuantity(personId: ID, equipmentId: ID, quantity: number) {
+    setEquipmentQuantity(personId: ID, equipmentId: ID, quantity: number): void {
       const person = this.findPerson(personId)
       if (!person) return
       if (quantity < 1) {

@@ -206,6 +206,7 @@ assets/                       앱 아이콘·스플래시 원본
 
 - **타입 먼저:** 데이터 구조를 `types/`에 먼저 정하고 개발해요. `any`는 쓰지 않아요.
 - **`.vue` 파일 순서:** `<template>` → `<script setup lang="ts">` → `<style scoped lang="scss">`
+- **함수 내보내기:** `utils/`·`composables/`(useSupabase 제외)는 `export default { 함수() {} }` 객체로 내보내고, 쓰는 곳에서 명시 import 해요. 로컬 함수는 반환 타입을 적은 화살표 함수(`const f = (): void => {}`)로 써요.
 - **선택 목록:** 기본 `<select>` 대신 `components/SelectMenu.vue`를 써요.
 - **컴포넌트는 필요할 때만 나눠요.** 여러 화면에서 같이 쓰는 것만 컴포넌트로 빼요.
 - **색·간격은 토큰으로:** `var(--color-primary)`, `var(--space-3)`처럼 `_tokens.scss`의 변수를 써요.

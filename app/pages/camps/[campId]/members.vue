@@ -64,20 +64,20 @@ const store = useCampStore()
 const gear = useGearStore()
 const route = useRoute()
 
+const newName = ref('')
+const addError = ref('')
+
 const members = computed(() => store.currentCamp?.members ?? [])
 /** 등록은 되어 있지만 아직 이 캠핑에 없는 사람 */
 const candidates = computed(() =>
   gear.people.filter((p) => !members.value.some((m) => m.id === p.id)),
 )
 
-const newName = ref('')
-const addError = ref('')
-
-function addPerson(person: Person) {
+const addPerson = (person: Person): void => {
   store.addMember(person)
 }
 
-function addByName() {
+const addByName = (): void => {
   const name = newName.value.trim()
   if (!name) return
   if (members.value.some((m) => m.name === name)) {
@@ -95,7 +95,7 @@ function addByName() {
   addError.value = ''
 }
 
-function remove(member: Member) {
+const remove = (member: Member): void => {
   const message = member.equipments.length
     ? `${member.name}님과 담당으로 정한 장비를 빼시겠어요?`
     : `${member.name}님을 이번 캠핑에서 빼시겠어요?`
@@ -103,11 +103,9 @@ function remove(member: Member) {
   store.removeMember(member.id)
 }
 
-function bringingCount(member: Member): number {
-  return member.equipments.reduce((sum, e) => sum + e.quantity, 0)
-}
+const bringingCount = (member: Member): number => member.equipments.reduce((sum, e) => sum + e.quantity, 0)
 
-function reset() {
+const reset = (): void => {
   if (!confirm('멤버를 모두 빼고 배분도 비울까요?')) return
   store.resetMembers()
 }

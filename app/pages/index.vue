@@ -56,7 +56,7 @@
           </button>
         </li>
         <li v-if="me" class="clear-row">
-          <button type="button" class="me-option clear" @click="chooseMe(null)">선택 안 함</button>
+          <button type="button" class="me-option clear" @click="chooseMe()">선택 안 함</button>
         </li>
       </ul>
     </div>
@@ -96,14 +96,19 @@ const gear = useGearStore()
 // 정보를 입력하지 않고 나온 빈 캠핑은 목록에 남기지 않는다.
 store.removeEmptyDrafts()
 
+const choosingMe = ref(false)
+const mePicker = ref<HTMLElement>()
+
+onMounted(() => document.addEventListener('pointerdown', closeOnOutside))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside))
+
 const gearCount = computed(() => gear.people.reduce((sum, p) => sum + p.equipments.length, 0))
 
 // 지난 캠핑은 '지난 캠핑' 페이지에서 따로 본다.
 const camps = computed(() => store.upcomingCamps)
 
 // 이 기기를 쓰는 사람. 고르면 그 사람이 멤버인 캠핑을 따로 모아 보여 준다.
-const me = computed(() => (store.meId ? gear.findPerson(store.meId) ?? null : null))
-const choosingMe = ref(false)
+const me = computed(() => (store.meId ? gear.findPerson(store.meId) : undefined))
 const myCamps = computed(() => (me.value ? camps.value.filter((camp) => camp.members.some((m) => m.id === me.value?.id)) : []))
 // 내 캠핑을 골랐으면 아래 목록에서는 빼서 같은 캠핑이 두 번 보이지 않게 한다.
 const otherCamps = computed(() => camps.value.filter((camp) => !myCamps.value.includes(camp)))
@@ -115,20 +120,17 @@ const sections = computed(() => {
   ]
 })
 
-function chooseMe(personId: string | null) {
+const chooseMe = (personId?: string): void => {
   store.meId = personId
   choosingMe.value = false
 }
 
 // 이름 목록 밖을 누르면 닫는다.
-const mePicker = ref<HTMLElement | null>(null)
-function closeOnOutside(event: PointerEvent) {
+const closeOnOutside = (event: PointerEvent): void => {
   if (choosingMe.value && !mePicker.value?.contains(event.target as Node)) choosingMe.value = false
 }
-onMounted(() => document.addEventListener('pointerdown', closeOnOutside))
-onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside))
 
-function startNewCamp() {
+const startNewCamp = (): void => {
   const campId = store.createCamp()
   navigateTo(`/camps/${campId}/info`)
 }

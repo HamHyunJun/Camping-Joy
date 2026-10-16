@@ -40,7 +40,7 @@
           @change="mapPlace = { ...form.place }"
         />
         <!-- 캠핑장 이름으로 네이버 지도를 열어 주소를 복사해 올 수 있게 한다 -->
-        <button v-if="form.place.name.trim() && !form.place.address.trim()" class="btn btn-text find" type="button" @click="openNaverMap(form.place.name.trim())">
+        <button v-if="form.place.name.trim() && !form.place.address.trim()" class="btn btn-text find" type="button" @click="naverMaps.openNaverMap(form.place.name.trim())">
           네이버 지도에서 주소 찾기
         </button>
         <PlaceMap v-if="mapPlace.address.trim()" :place="mapPlace" />
@@ -61,15 +61,15 @@
 
 <script setup lang="ts">
 import type { CampPlace } from '~/types/camp'
+import naverMaps from '~/composables/useNaverMaps'
 
 const store = useCampStore()
 const route = useRoute()
 
-const camp = computed(() => store.currentCamp)
 const form = reactive({
-  name: camp.value?.name ?? '',
-  place: { name: camp.value?.place?.name ?? '', address: camp.value?.place?.address ?? '' },
-  date: camp.value?.date ?? '',
+  name: store.currentCamp?.name ?? '',
+  place: { name: store.currentCamp?.place?.name ?? '', address: store.currentCamp?.place?.address ?? '' },
+  date: store.currentCamp?.date ?? '',
 })
 /** 지도는 주소 입력을 마쳤을 때만 다시 그린다. */
 const mapPlace = ref<CampPlace>({ ...form.place })
@@ -78,7 +78,7 @@ const submitted = ref(false)
 const nameError = computed(() => (form.name.trim() ? '' : '캠핑명을 입력해 주세요.'))
 const dateError = computed(() => (form.date ? '' : '날짜를 선택해 주세요.'))
 
-function save() {
+const save = (): void => {
   submitted.value = true
   if (nameError.value || dateError.value) return
   store.updateCampInfo({ name: form.name, place: form.place, date: form.date })

@@ -59,18 +59,19 @@ import menuIcon from '~/assets/icons/menu.svg'
 import tentIcon from '~/assets/icons/tent.svg'
 
 const route = useRoute()
-const campId = computed(() => {
-  const id = route.params.campId
-  return typeof id === 'string' ? id : null
-})
 
 const menuOpen = ref(false)
-watch(() => route.fullPath, () => (menuOpen.value = false))
-
 const menuItems = [
   { to: '/', label: '전체 캠핑' },
   { to: '/gear', label: '멤버·장비 등록' },
 ]
+
+const campId = computed(() => {
+  const id = route.params.campId
+  return typeof id === 'string' ? id : undefined
+})
+
+watch(() => route.fullPath, () => (menuOpen.value = false))
 </script>
 
 <style scoped lang="scss">

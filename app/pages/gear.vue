@@ -75,35 +75,35 @@ const query = ref('')
 const adding = ref(false)
 const newName = ref('')
 const error = ref('')
-const lastAddedId = ref<string | null>(null)
-const nameInput = ref<HTMLInputElement | null>(null)
+const lastAddedId = ref<string>()
+const nameInput = ref<HTMLInputElement>()
 
 const keyword = computed(() => query.value.trim())
 const filteredPeople = computed(() =>
   keyword.value ? gear.people.filter((p) => p.name.includes(keyword.value)) : gear.people,
 )
 
-async function openAdd() {
+const openAdd = async (): Promise<void> => {
   adding.value = true
   error.value = ''
   await nextTick()
   nameInput.value?.focus()
 }
 
-function closeAdd() {
+const closeAdd = (): void => {
   adding.value = false
   newName.value = ''
   error.value = ''
 }
 
-function addPerson(name: string) {
+const addPerson = (name: string): void => {
   const trimmed = name.trim()
   if (!trimmed) return
   if (gear.findPersonByName(trimmed)) {
     error.value = '이미 등록된 이름이에요.'
     return
   }
-  lastAddedId.value = gear.addPerson(trimmed)?.id ?? null
+  lastAddedId.value = gear.addPerson(trimmed)?.id
   query.value = ''
   closeAdd()
 }

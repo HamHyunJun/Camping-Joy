@@ -10,7 +10,7 @@
           <strong>{{ camp.name || '이름 없는 캠핑' }}</strong>
           <span v-if="dday" class="dday" :class="{ past: dday === '지난 캠핑' }">{{ dday }}</span>
         </span>
-        <span class="meta">{{ formatDate(camp.date) }} · 멤버 {{ camp.members.length }}명</span>
+        <span class="meta">{{ format.formatDate(camp.date) }} · 멤버 {{ camp.members.length }}명</span>
         <span class="status">
           <span class="status-label" :class="{ complete: progress.label === '준비 완료' }">
             {{ progress.label }}
@@ -31,19 +31,22 @@
 <script setup lang="ts">
 import trashIcon from '~/assets/icons/trash.svg'
 import type { Camp } from '~/types/camp'
+import campSteps from '~/utils/campSteps'
+import format from '~/utils/format'
 
 const props = defineProps<{ camp: Camp }>()
+
 const store = useCampStore()
 
-const progress = computed(() => campProgress(props.camp))
-const dday = computed(() => formatDday(props.camp.date))
+const progress = computed(() => campSteps.campProgress(props.camp))
+const dday = computed(() => format.formatDday(props.camp.date))
 
-function removeCamp(camp: Camp) {
+const removeCamp = (camp: Camp): void => {
   if (!confirm(`'${camp.name || '이름 없는 캠핑'}'을(를) 삭제할까요?\n모든 사람의 전체 캠핑에서 지워져요.`)) return
   store.deleteCamp(camp.id)
 }
 
-function dateParts(date: string): { month: string; day: string } {
+const dateParts = (date: string): { month: string; day: string } => {
   const [, month = '', day = ''] = date.split('-')
   return { month: `${Number(month)}월`, day: String(Number(day)) }
 }

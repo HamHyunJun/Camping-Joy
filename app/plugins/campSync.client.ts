@@ -12,11 +12,11 @@ export default defineNuxtPlugin(() => {
   const db = supabase
   const store = useCampStore()
 
-  function isDraft(camp: Camp): boolean {
+  const isDraft = (camp: Camp): boolean => {
     return !camp.name.trim() && !camp.members.length
   }
 
-  function toRow(camp: Camp): CampRow {
+  const toRow = (camp: Camp): CampRow => {
     return {
       id: camp.id,
       name: camp.name.slice(0, 50),
@@ -34,7 +34,7 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  function fromRow(row: CampRow): Camp {
+  const fromRow = (row: CampRow): Camp => {
     return {
       id: row.id,
       name: row.name,
@@ -54,22 +54,22 @@ export default defineNuxtPlugin(() => {
   /** 서버와 마지막으로 맞춘 내용 (캠핑 id → 행 JSON) */
   let baseline = new Map<string, string>()
   let ready = false
-  let pushing: Promise<void> | null = null
-  let pushTimer: ReturnType<typeof setTimeout> | null = null
-  let refreshTimer: ReturnType<typeof setTimeout> | null = null
+  let pushing: Promise<void> | undefined
+  let pushTimer: ReturnType<typeof setTimeout> | undefined
+  let refreshTimer: ReturnType<typeof setTimeout> | undefined
 
-  async function fetchCamps(): Promise<CampRow[]> {
+  const fetchCamps = async (): Promise<CampRow[]> => {
     const { data, error } = await db.from('camps').select('*').order('created_at')
     if (error) throw error
     return data
   }
 
-  function apply(rows: CampRow[]) {
+  const apply = (rows: CampRow[]): void => {
     baseline = new Map(rows.map((row) => [row.id, JSON.stringify(toRow(fromRow(row)))]))
     store.replaceCamps(rows.map(fromRow))
   }
 
-  async function push() {
+  const push = async (): Promise<void> => {
     const rows = store.camps.filter((camp) => !isDraft(camp)).map(toRow)
     const changed = rows.filter((row) => baseline.get(row.id) !== JSON.stringify(row))
     const ids = new Set(store.camps.map((camp) => camp.id))
@@ -87,20 +87,20 @@ export default defineNuxtPlugin(() => {
     store.markSynced(changed.map((row) => row.id))
   }
 
-  function schedulePush() {
+  const schedulePush = (): void => {
     if (!ready) return
     if (pushTimer) clearTimeout(pushTimer)
     pushTimer = setTimeout(() => {
-      pushTimer = null
+      pushTimer = undefined
       pushing = push()
         .catch(() => {
           // 인터넷이 안 되면 다음에 고칠 때 다시 올린다.
         })
-        .finally(() => (pushing = null))
+        .finally(() => (pushing = undefined))
     }, 600)
   }
 
-  async function refresh() {
+  const refresh = async (): Promise<void> => {
     // 이 기기에서 고친 내용을 올리는 중이면 끝난 뒤에 받는다.
     if (pushTimer || pushing) {
       await pushing
@@ -113,12 +113,12 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  function scheduleRefresh() {
+  const scheduleRefresh = (): void => {
     if (refreshTimer) clearTimeout(refreshTimer)
     refreshTimer = setTimeout(refresh, 300)
   }
 
-  async function start() {
+  const start = async (): Promise<void> => {
     try {
       // 처음 연결한 기기는 그동안 기기에만 있던 캠핑을 서버에 올릴 수 있도록 '아직 안 올림'으로 둔다.
       if (!store.syncedOnce) {

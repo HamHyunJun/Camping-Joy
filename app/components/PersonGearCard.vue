@@ -16,7 +16,7 @@
 
     <div v-if="open" class="details">
       <div class="person-actions">
-        <form v-if="editingName !== null" class="name-form" @submit.prevent="saveName">
+        <form v-if="editingName !== undefined" class="name-form" @submit.prevent="saveName">
           <input v-model="editingName" class="input" type="text" maxlength="20" />
           <button class="btn" type="submit">저장</button>
         </form>
@@ -37,10 +37,10 @@
               <span class="gear-name">
                 {{ item.name }}
                 <SelectMenu
-                  v-if="sizeGuideOf(item.name)"
+                  v-if="equipmentLabel.sizeGuideOf(item.name)"
                   class="size-select"
                   size="sm"
-                  :model-value="item.size ?? null"
+                  :model-value="item.size"
                   :options="sizeOptions(item.name)"
                   placeholder="크기 선택"
                   aria-label="크기"
@@ -53,7 +53,7 @@
                 <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
               </div>
               <input
-                v-if="hasModelName(item.name)"
+                v-if="equipmentLabel.hasModelName(item.name)"
                 class="input model-input"
                 type="text"
                 maxlength="30"
@@ -84,7 +84,7 @@
       <div v-if="sizingPreset && sizingGuide" class="size-picker">
         <!-- 툴팁이 크기 칩을 가리지 않도록, 여기서는 기준을 칩에 바로 적는다. -->
         <input
-          v-if="hasModelName(sizingPreset.name)"
+          v-if="equipmentLabel.hasModelName(sizingPreset.name)"
           v-model="sizingModel"
           class="input model-input"
           type="text"
@@ -92,7 +92,7 @@
           :placeholder="`${sizingPreset.name}명 (선택, 예: 코베아 고스트)`"
           :aria-label="`${sizingPreset.name}명`"
         />
-        <div class="size-picker-title">{{ sizingPreset.name }} 크기를 골라 주세요</div>
+        <p class="size-picker-title">{{ sizingPreset.name }} 크기를 골라 주세요</p>
         <div class="size-options">
           <button v-for="option in sizingGuide.options" :key="option.label" class="chip" type="button" @click="addWithSize(option.label)">
             {{ option.label }}<small v-if="option.description">{{ option.description }}</small>
@@ -118,81 +118,83 @@
 import type { Equipment, EquipmentCategory, Person } from '~/types/camp'
 import type { SelectMenuOption } from '~/components/SelectMenu.vue'
 import { EQUIPMENT_CATEGORY_LABELS, EQUIPMENT_PRESETS, type EquipmentPreset } from '~/constants/equipment'
+import equipmentLabel from '~/utils/equipmentLabel'
+import groupByCategory from '~/utils/groupByCategory'
 
 const props = defineProps<{ person: Person; initiallyOpen?: boolean }>()
+
 const gear = useGearStore()
 
-const groups = computed(() => groupByCategory(props.person.equipments))
 const categoryOptions: SelectMenuOption[] = Object.entries(EQUIPMENT_CATEGORY_LABELS).map(([value, label]) => ({ value, label }))
 
-function sizeOptions(name: string): SelectMenuOption[] {
-  return (sizeGuideOf(name)?.options ?? []).map((o) => ({ value: o.label, label: o.label, hint: o.description }))
-}
-
 const open = ref(props.initiallyOpen ?? false)
-// 다른 사람을 새로 추가하면 앞사람 카드는 접는다.
-watch(
-  () => props.initiallyOpen,
-  (value) => (open.value = value ?? false),
-)
-const totalCount = computed(() => props.person.equipments.reduce((sum, e) => sum + e.quantity, 0))
-/** 접힌 상태에서 보여줄 카테고리별 개수 */
-const categorySummary = computed(() =>
-  groups.value.map((group) => `${group.label} ${group.items.reduce((sum, e) => sum + e.quantity, 0)}`).join(' · '),
-)
-
-const editingName = ref<string | null>(null)
+const editingName = ref<string>()
 const form = reactive<{ name: string; category: EquipmentCategory; quantity: number }>({
   name: '',
   category: 'etc',
   quantity: 1,
 })
-
 /** 크기를 골라야 하는 장비를 눌렀을 때 크기 선택을 연다. */
-const sizingPreset = ref<EquipmentPreset | null>(null)
+const sizingPreset = ref<EquipmentPreset>()
 /** 텐트처럼 이름을 적을 수 있는 장비를 추가할 때 함께 적는 이름 */
 const sizingModel = ref('')
-const sizingGuide = computed(() => (sizingPreset.value ? sizeGuideOf(sizingPreset.value.name) : undefined))
 
-function addPreset(preset: EquipmentPreset) {
-  if (sizeGuideOf(preset.name)) {
-    sizingPreset.value = sizingPreset.value?.name === preset.name ? null : preset
+const groups = computed(() => groupByCategory.groupByCategory(props.person.equipments))
+const totalCount = computed(() => props.person.equipments.reduce((sum, e) => sum + e.quantity, 0))
+/** 접힌 상태에서 보여줄 카테고리별 개수 */
+const categorySummary = computed(() =>
+  groups.value.map((group) => `${group.label} ${group.items.reduce((sum, e) => sum + e.quantity, 0)}`).join(' · '),
+)
+const sizingGuide = computed(() => (sizingPreset.value ? equipmentLabel.sizeGuideOf(sizingPreset.value.name) : undefined))
+
+const sizeOptions = (name: string): SelectMenuOption[] =>
+  (equipmentLabel.sizeGuideOf(name)?.options ?? []).map((o) => ({ value: o.label, label: o.label, hint: o.description }))
+
+const addPreset = (preset: EquipmentPreset): void => {
+  if (equipmentLabel.sizeGuideOf(preset.name)) {
+    sizingPreset.value = sizingPreset.value?.name === preset.name ? undefined : preset
     sizingModel.value = ''
     return
   }
   gear.addEquipment(props.person.id, { ...preset, quantity: 1 })
 }
 
-function addWithSize(size: string) {
+const addWithSize = (size: string): void => {
   if (!sizingPreset.value) return
   gear.addEquipment(props.person.id, { ...sizingPreset.value, quantity: 1, size, model: sizingModel.value })
-  sizingPreset.value = null
+  sizingPreset.value = undefined
   sizingModel.value = ''
 }
 
-function addCustom() {
+const addCustom = (): void => {
   if (!form.name.trim()) return
   gear.addEquipment(props.person.id, { ...form, quantity: Math.max(1, form.quantity) })
   form.name = ''
   form.quantity = 1
 }
 
-function decrease(item: Equipment) {
-  if (item.quantity <= 1 && !confirm(`${equipmentLabel(item)}을(를) 목록에서 삭제할까요?`)) return
+const decrease = (item: Equipment): void => {
+  if (item.quantity <= 1 && !confirm(`${equipmentLabel.equipmentLabel(item)}을(를) 목록에서 삭제할까요?`)) return
   gear.setEquipmentQuantity(props.person.id, item.id, item.quantity - 1)
 }
 
-function saveName() {
-  if (editingName.value !== null) gear.renamePerson(props.person.id, editingName.value)
-  editingName.value = null
+const saveName = (): void => {
+  if (editingName.value !== undefined) gear.renamePerson(props.person.id, editingName.value)
+  editingName.value = undefined
 }
 
-function removePerson() {
+const removePerson = (): void => {
   const campCount = useCampStore().countCampsWithPerson(props.person.id)
   const extra = campCount ? `\n멤버로 들어간 캠핑 ${campCount}곳에서도 빠지고, 챙길 장비도 함께 빠져요.` : ''
   if (!confirm(`${props.person.name}님과 등록된 장비를 모두 삭제할까요?${extra}`)) return
   gear.removePerson(props.person.id)
 }
+
+// 다른 사람을 새로 추가하면 앞사람 카드는 접는다.
+watch(
+  () => props.initiallyOpen,
+  (value) => (open.value = value ?? false),
+)
 </script>
 
 <style scoped lang="scss">
@@ -412,7 +414,7 @@ function removePerson() {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  margin-bottom: var(--space-2);
+  margin: 0 0 var(--space-2);
   font-size: 14px;
   font-weight: 600;
 }

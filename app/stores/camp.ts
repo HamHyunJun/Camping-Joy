@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import type { Camp, CampPlace, Equipment, ID, Member, Person, ScheduleItem } from '~/types/camp'
-import { createId } from '~/utils/id'
+import idUtil from '~/utils/id'
 
 interface CampState {
   camps: Camp[]
-  currentCampId: ID | null
+  currentCampId: ID | undefined
   /** 이 기기를 쓰는 사람(등록된 Person.id). '내가 참여한 캠핑'을 고를 때 쓴다. */
-  meId: ID | null
+  meId: ID | undefined
   /** 이 기기에 있던 캠핑을 서버에 한 번 올렸는지 (처음 연결할 때만 올린다) */
   syncedOnce: boolean
 }
@@ -17,15 +17,11 @@ export interface CampInfoInput {
   date: string
 }
 
-function now(): string {
-  return new Date().toISOString()
-}
+const now = (): string => new Date().toISOString()
 
-function readyKey(memberId: ID, equipmentId: ID): string {
-  return `${memberId}:${equipmentId}`
-}
+const readyKey = (memberId: ID, equipmentId: ID): string => `${memberId}:${equipmentId}`
 
-function today(): string {
+const today = (): string => {
   const date = new Date()
   const offset = date.getTimezoneOffset() * 60_000
   return new Date(date.getTime() - offset).toISOString().slice(0, 10)
@@ -34,13 +30,13 @@ function today(): string {
 export const useCampStore = defineStore('camp', {
   state: (): CampState => ({
     camps: [],
-    currentCampId: null,
-    meId: null,
+    currentCampId: undefined,
+    meId: undefined,
     syncedOnce: false,
   }),
   getters: {
-    currentCamp: (state): Camp | null =>
-      state.camps.find((camp) => camp.id === state.currentCampId) ?? null,
+    currentCamp: (state): Camp | undefined =>
+      state.camps.find((camp) => camp.id === state.currentCampId),
     /** 오늘이나 앞으로 갈 캠핑. 가까운 날짜가 먼저 */
     upcomingCamps: (state): Camp[] =>
       state.camps
@@ -57,7 +53,7 @@ export const useCampStore = defineStore('camp', {
     createCamp(): ID {
       const timestamp = now()
       const camp: Camp = {
-        id: createId(),
+        id: idUtil.createId(),
         name: '',
         date: today(),
         members: [],
@@ -74,10 +70,10 @@ export const useCampStore = defineStore('camp', {
     },
     selectCamp(campId: ID): boolean {
       const exists = this.camps.some((camp) => camp.id === campId)
-      this.currentCampId = exists ? campId : null
+      this.currentCampId = exists ? campId : undefined
       return exists
     },
-    updateCampInfo(input: CampInfoInput) {
+    updateCampInfo(input: CampInfoInput): void {
       const camp = this.currentCamp
       if (!camp) return
       camp.name = input.name.trim()
@@ -87,34 +83,34 @@ export const useCampStore = defineStore('camp', {
       camp.updatedAt = now()
     },
     /** '새 캠핑'만 누르고 정보를 저장하지 않은 빈 캠핑을 지운다. */
-    removeEmptyDrafts() {
+    removeEmptyDrafts(): void {
       const empty = this.camps.filter((camp) => !camp.name.trim() && !camp.members.length)
       for (const camp of empty) this.deleteCamp(camp.id)
     },
     /** 서버의 캠핑 목록으로 바꾼다. 아직 서버에 올리지 않은 이 기기의 캠핑은 남긴다. */
-    replaceCamps(server: Camp[]) {
+    replaceCamps(server: Camp[]): void {
       const pending = this.camps.filter((camp) => !camp.synced && !server.some((c) => c.id === camp.id))
       this.camps = [...server, ...pending]
-      if (this.currentCampId && !this.camps.some((c) => c.id === this.currentCampId)) this.currentCampId = null
+      if (this.currentCampId && !this.camps.some((c) => c.id === this.currentCampId)) this.currentCampId = undefined
     },
-    markSynced(campIds: ID[]) {
+    markSynced(campIds: ID[]): void {
       for (const camp of this.camps) if (campIds.includes(camp.id)) camp.synced = true
     },
-    deleteCamp(campId: ID) {
+    deleteCamp(campId: ID): void {
       this.camps = this.camps.filter((camp) => camp.id !== campId)
-      if (this.currentCampId === campId) this.currentCampId = null
+      if (this.currentCampId === campId) this.currentCampId = undefined
     },
 
     // 멤버 (장비 등록에 있는 사람을 캠핑에 넣는다)
-    addMember(person: Person): Member | null {
+    addMember(person: Person): Member | undefined {
       const camp = this.currentCamp
-      if (!camp || camp.members.some((m) => m.id === person.id)) return null
+      if (!camp || camp.members.some((m) => m.id === person.id)) return undefined
       const member: Member = { id: person.id, name: person.name, equipments: [] }
       camp.members.push(member)
       camp.updatedAt = now()
       return member
     },
-    removeMember(memberId: ID) {
+    removeMember(memberId: ID): void {
       const camp = this.currentCamp
       if (!camp) return
       camp.members = camp.members.filter((m) => m.id !== memberId)
@@ -128,7 +124,7 @@ export const useCampStore = defineStore('camp', {
       camp.updatedAt = now()
     },
     /** 장비 등록에서 이름을 바꾸면 모든 캠핑의 멤버 이름도 맞춘다. */
-    syncMemberName(personId: ID, name: string) {
+    syncMemberName(personId: ID, name: string): void {
       for (const camp of this.camps) {
         const member = camp.members.find((m) => m.id === personId)
         if (member) member.name = name
@@ -141,7 +137,7 @@ export const useCampStore = defineStore('camp', {
       return this.camps.filter((camp) => camp.members.some((m) => m.id === personId)).length
     },
     /** 같은 사람이 다른 id로 등록돼 있을 때(서버 목록과 처음 합칠 때) 캠핑 멤버 id를 바꾼다. */
-    remapPerson(oldId: ID, newId: ID) {
+    remapPerson(oldId: ID, newId: ID): void {
       for (const camp of this.camps) {
         if (camp.members.some((m) => m.id === newId)) continue
         const member = camp.members.find((m) => m.id === oldId)
@@ -152,7 +148,7 @@ export const useCampStore = defineStore('camp', {
       }
     },
     /** 등록에서 사람을 지우면 모든 캠핑에서 멤버와 그 사람의 장비를 뺀다. */
-    removePersonFromCamps(personId: ID) {
+    removePersonFromCamps(personId: ID): void {
       for (const camp of this.camps) {
         camp.members = camp.members.filter((m) => m.id !== personId)
         for (const member of camp.members) {
@@ -166,7 +162,7 @@ export const useCampStore = defineStore('camp', {
      * - 없어진 장비는 빼고, 크기를 합쳐 id가 바뀐 장비는 새 id로 옮긴다.
      * - 챙길 수량이 보유 수량을 넘으면 보유 수량으로 줄인다.
      */
-    syncOwnerEquipments(personId: ID, owned: Equipment[], renamedIds: Record<ID, ID> = {}) {
+    syncOwnerEquipments(personId: ID, owned: Equipment[], renamedIds: Record<ID, ID> = {}): void {
       for (const camp of this.camps) {
         for (const member of camp.members) {
           const next: Equipment[] = []
@@ -204,7 +200,7 @@ export const useCampStore = defineStore('camp', {
       )
     },
     /** 보유 장비 하나를 멤버의 담당 장비에 1개 더한다. 모든 멤버 합계가 보유 수량을 넘지 않는다. */
-    addMemberEquipment(memberId: ID, owned: Equipment) {
+    addMemberEquipment(memberId: ID, owned: Equipment): void {
       const camp = this.currentCamp
       const member = camp?.members.find((m) => m.id === memberId)
       if (!camp || !member) return
@@ -215,7 +211,7 @@ export const useCampStore = defineStore('camp', {
       camp.updatedAt = now()
     },
     /** 담당 장비에서 1개 뺀다. 0개가 되면 목록에서 지운다. */
-    removeMemberEquipment(memberId: ID, equipmentId: ID) {
+    removeMemberEquipment(memberId: ID, equipmentId: ID): void {
       const camp = this.currentCamp
       const member = camp?.members.find((m) => m.id === memberId)
       const bringing = member?.equipments.find((e) => e.id === equipmentId)
@@ -230,7 +226,7 @@ export const useCampStore = defineStore('camp', {
 
     // 초기화
     /** 멤버를 모두 뺀다. 배분과 준비 체크도 함께 비운다. */
-    resetMembers() {
+    resetMembers(): void {
       const camp = this.currentCamp
       if (!camp) return
       camp.members = []
@@ -239,7 +235,7 @@ export const useCampStore = defineStore('camp', {
       camp.updatedAt = now()
     },
     /** 멤버는 두고 배분(챙길 장비)과 준비 체크만 비운다. */
-    resetDistribution() {
+    resetDistribution(): void {
       const camp = this.currentCamp
       if (!camp) return
       for (const member of camp.members) member.equipments = []
@@ -251,7 +247,7 @@ export const useCampStore = defineStore('camp', {
     isReady(memberId: ID, equipmentId: ID): boolean {
       return this.currentCamp?.readyItems?.includes(readyKey(memberId, equipmentId)) ?? false
     },
-    toggleReady(memberId: ID, equipmentId: ID) {
+    toggleReady(memberId: ID, equipmentId: ID): void {
       const camp = this.currentCamp
       if (!camp) return
       const key = readyKey(memberId, equipmentId)
@@ -261,14 +257,14 @@ export const useCampStore = defineStore('camp', {
     },
 
     // 일정
-    addScheduleItem(input: Omit<ScheduleItem, 'id'>) {
+    addScheduleItem(input: Omit<ScheduleItem, 'id'>): void {
       const camp = this.currentCamp
       const title = input.title.trim().slice(0, 40)
       if (!camp || !title) return
-      camp.schedule = [...(camp.schedule ?? []), { ...input, id: createId(), title }]
+      camp.schedule = [...(camp.schedule ?? []), { ...input, id: idUtil.createId(), title }]
       camp.updatedAt = now()
     },
-    updateScheduleItem(itemId: ID, patch: Partial<Omit<ScheduleItem, 'id'>>) {
+    updateScheduleItem(itemId: ID, patch: Partial<Omit<ScheduleItem, 'id'>>): void {
       const camp = this.currentCamp
       const item = camp?.schedule?.find((s) => s.id === itemId)
       if (!camp || !item) return
@@ -276,14 +272,14 @@ export const useCampStore = defineStore('camp', {
       if (patch.title?.trim()) item.title = patch.title.trim().slice(0, 40)
       camp.updatedAt = now()
     },
-    removeScheduleItem(itemId: ID) {
+    removeScheduleItem(itemId: ID): void {
       const camp = this.currentCamp
       if (!camp) return
       camp.schedule = camp.schedule?.filter((s) => s.id !== itemId)
       camp.updatedAt = now()
     },
     /** 그날 일정을 모두 지우고, 뒤의 날을 하루씩 앞당긴다. */
-    removeScheduleDay(day: number) {
+    removeScheduleDay(day: number): void {
       const camp = this.currentCamp
       if (!camp) return
       camp.schedule = (camp.schedule ?? [])

@@ -26,25 +26,26 @@
 
 <script setup lang="ts">
 import { CAMP_STEPS, type CampStep } from '~/constants/steps'
+import campSteps from '~/utils/campSteps'
 
 const props = defineProps<{ campId: string }>()
+
 const route = useRoute()
 const store = useCampStore()
-
-function canVisit(path: CampStep['path']): boolean {
-  return store.currentCamp ? canVisitStep(store.currentCamp, path) : false
-}
-
-function isDone(path: CampStep['path']): boolean {
-  if (!store.currentCamp || path === 'result') return false
-  // 일정은 하나라도 적었을 때만 완료로 보여 준다.
-  if (path === 'schedule') return Boolean(store.currentCamp.schedule?.length)
-  return isStepComplete(store.currentCamp, path)
-}
 
 const currentIndex = computed(() =>
   CAMP_STEPS.findIndex((step) => route.path.endsWith(`/${step.path}`)),
 )
+
+const canVisit = (path: CampStep['path']): boolean =>
+  store.currentCamp ? campSteps.canVisitStep(store.currentCamp, path) : false
+
+const isDone = (path: CampStep['path']): boolean => {
+  if (!store.currentCamp || path === 'result') return false
+  // 일정은 하나라도 적었을 때만 완료로 보여 준다.
+  if (path === 'schedule') return Boolean(store.currentCamp.schedule?.length)
+  return campSteps.isStepComplete(store.currentCamp, path)
+}
 </script>
 
 <style scoped lang="scss">

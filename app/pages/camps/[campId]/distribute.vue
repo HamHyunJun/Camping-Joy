@@ -30,7 +30,7 @@
               <ul class="gear-list">
                 <li v-for="item in group.items" :key="`${holderOf(item)?.id}:${item.id}`" class="gear-item">
                   <span class="gear-name">
-                    {{ equipmentLabel(item) }}
+                    {{ equipmentLabel.equipmentLabel(item) }}
                     <small class="owner">{{ holderOf(item)?.name }}</small>
                   </span>
                   <div class="stepper">
@@ -101,7 +101,7 @@
               :class="{ 'is-used-up': remaining(item) < 1 }"
             >
               <span class="gear-name">
-                {{ equipmentLabel(item) }}
+                {{ equipmentLabel.equipmentLabel(item) }}
                 <small class="owner">{{ ownerName(item.ownerId) }}</small>
               </span>
               <span class="qty">남은 {{ remaining(item) }}</span>
@@ -133,6 +133,8 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
 import type { Equipment, ID, Member } from '~/types/camp'
+import equipmentLabel from '~/utils/equipmentLabel'
+import groupByCategory from '~/utils/groupByCategory'
 
 definePageMeta({ wide: true })
 
@@ -140,56 +142,49 @@ const store = useCampStore()
 const gear = useGearStore()
 const route = useRoute()
 
-const members = computed(() => store.currentCamp?.members ?? [])
+const dragGroup = 'distribute'
+const pointerEvents = ['dragover', 'mousemove', 'touchmove'] as const
+// 드래그 중에는 공통 목록 위에 덮개를 띄워 거기에 놓게 한다.
+// 목록 안에 바로 끼워 넣으면 SortableJS가 자리를 계산하며 항목들이 위아래로 흔들린다.
+const dropZone = ref<HTMLElement>()
+const dragging = ref(false)
+const overDropZone = ref(false)
 
+onBeforeUnmount(() => onDragEnd())
+
+const members = computed(() => store.currentCamp?.members ?? [])
 /** 이번 캠핑 멤버들이 등록해 둔 장비 전체 */
 const pool = computed<Equipment[]>(() => members.value.flatMap((m) => gear.findPerson(m.id)?.equipments ?? []))
-const poolGroups = computed(() => groupByCategory(pool.value))
-
+const poolGroups = computed(() => groupByCategory.groupByCategory(pool.value))
 /** 공통으로 챙길 장비: 모든 멤버의 담당 장비를 한 목록으로 모은다. 장비는 주인이 챙긴다. */
 const shared = computed<Equipment[]>(() => members.value.flatMap((m) => m.equipments))
-const sharedGroups = computed(() => groupByCategory(shared.value))
+const sharedGroups = computed(() => groupByCategory.groupByCategory(shared.value))
 
-const dragGroup = 'distribute'
-
-function ownerName(ownerId: ID): string {
-  return members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
-}
+const ownerName = (ownerId: ID): string =>
+  members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
 
 /** 공통 목록의 항목을 실제로 들고 있는 멤버 */
-function holderOf(item: Equipment): Member | undefined {
-  return members.value.find((m) => m.equipments.includes(item))
-}
+const holderOf = (item: Equipment): Member | undefined => members.value.find((m) => m.equipments.includes(item))
 
-function remaining(owned: Equipment): number {
-  return owned.quantity - store.assignedQuantity(owned.id)
-}
+const remaining = (owned: Equipment): number => owned.quantity - store.assignedQuantity(owned.id)
 
-function ownedOf(equipmentId: ID): Equipment | undefined {
-  return pool.value.find((e) => e.id === equipmentId)
-}
+const ownedOf = (equipmentId: ID): Equipment | undefined => pool.value.find((e) => e.id === equipmentId)
 
-function add(owned: Equipment) {
+const add = (owned: Equipment): void => {
   store.addMemberEquipment(owned.ownerId, owned)
 }
 
-function addAgain(item: Equipment) {
+const addAgain = (item: Equipment): void => {
   const owned = ownedOf(item.id)
   if (owned) add(owned)
 }
 
-function subtract(item: Equipment) {
+const subtract = (item: Equipment): void => {
   const holder = holderOf(item)
   if (holder) store.removeMemberEquipment(holder.id, item.id)
 }
 
-// 드래그 중에는 공통 목록 위에 덮개를 띄워 거기에 놓게 한다.
-// 목록 안에 바로 끼워 넣으면 SortableJS가 자리를 계산하며 항목들이 위아래로 흔들린다.
-const dropZone = ref<HTMLElement | null>(null)
-const dragging = ref(false)
-const overDropZone = ref(false)
-
-function trackPointer(event: DragEvent | MouseEvent | TouchEvent) {
+const trackPointer = (event: DragEvent | MouseEvent | TouchEvent): void => {
   const point = 'touches' in event ? event.touches[0] : event
   // 모바일에서는 덮개가 화면 위쪽에 고정되므로 덮개 자체의 위치로 판단한다.
   const rect = dropZone.value?.querySelector('.drop-overlay')?.getBoundingClientRect()
@@ -198,37 +193,33 @@ function trackPointer(event: DragEvent | MouseEvent | TouchEvent) {
     point.clientX >= rect.left && point.clientX <= rect.right && point.clientY >= rect.top && point.clientY <= rect.bottom
 }
 
-const pointerEvents = ['dragover', 'mousemove', 'touchmove'] as const
-
-function onDragStart() {
+const onDragStart = (): void => {
   dragging.value = true
   overDropZone.value = false
   for (const type of pointerEvents) document.addEventListener(type, trackPointer, { capture: true, passive: true })
 }
 
-function onDragEnd() {
+const onDragEnd = (): void => {
   for (const type of pointerEvents) document.removeEventListener(type, trackPointer, { capture: true })
   dragging.value = false
   overDropZone.value = false
 }
 
-onBeforeUnmount(onDragEnd)
-
 /** 보유 장비를 덮개에 놓았을 때. 덮개 안에서 손을 뗐을 때만 추가한다. */
-function onDrop(list: Equipment[]) {
+const onDrop = (list: Equipment[]): void => {
   const dropped = list.find((item) => pool.value.includes(item))
   if (dropped && overDropZone.value) add(dropped)
 }
 
-function assignedCount(memberId: ID): number {
+const assignedCount = (memberId: ID): number => {
   const member = members.value.find((m) => m.id === memberId)
   return member?.equipments.reduce((sum, e) => sum + e.quantity, 0) ?? 0
 }
 
-const keepItem = (item: Equipment) => item
-const ignore = () => {}
+const keepItem = (item: Equipment): Equipment => item
+const ignore = (): void => {}
 
-function reset() {
+const reset = (): void => {
   if (!confirm('공통으로 챙길 장비를 모두 비울까요?')) return
   store.resetDistribution()
 }

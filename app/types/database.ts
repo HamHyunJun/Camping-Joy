@@ -1,6 +1,7 @@
 import type { Assignment, CampPlace, EquipmentCategory, Member, RequiredEquipment, ScheduleItem } from '~/types/camp'
 
 // supabase/migrations 의 테이블을 supabase-js에 알려 주는 타입 (supabase gen types 형식을 손으로 맞춤)
+// supabase-js는 Row가 interface면 타입이 never가 되므로, 여기만 type alias를 쓴다.
 type Table<Row, Insert> = { Row: Row; Insert: Insert; Update: Partial<Insert>; Relationships: [] }
 
 export type PersonRow = {

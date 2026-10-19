@@ -81,7 +81,7 @@
 
     <div class="page-actions">
       <NuxtLink class="btn" :to="`/camps/${route.params.campId}/distribute`">이전</NuxtLink>
-      <NuxtLink class="btn btn-primary" :to="`/camps/${route.params.campId}/result`">다음: 결과 보기</NuxtLink>
+      <NuxtLink class="btn btn-primary" :to="`/camps/${route.params.campId}/meals`">다음: 음식 정하기</NuxtLink>
     </div>
   </section>
 </template>

@@ -29,6 +29,16 @@
               <p v-for="item in group.items" :key="item.id"><b>{{ item.time }}</b> {{ item.title }}</p>
             </div>
           </div>
+          <div v-if="menus.length || camp.shopping?.length" class="share-schedule">
+            <div v-for="group in menus" :key="group.day">
+              <small>{{ group.day }}일차 음식</small>
+              <p v-for="meal in group.items" :key="meal.id"><b>{{ meal.type }}</b> {{ meal.menu }}</p>
+            </div>
+            <div v-if="camp.shopping?.length">
+              <small>장볼 것</small>
+              <p>{{ camp.shopping.map((s) => s.name).join(', ') }}</p>
+            </div>
+          </div>
           <ul class="share-members">
             <li v-for="member in camp.members" :key="member.id">
               <div class="share-member">
@@ -91,6 +101,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 const text = computed(() => shareTextUtil.buildShareText(props.camp))
 const dday = computed(() => format.formatDday(props.camp.date))
 const schedule = computed(() => format.scheduleGroups(format.sortSchedule(props.camp.schedule ?? [])))
+const menus = computed(() => format.scheduleGroups(format.sortMeals((props.camp.menus ?? []).filter((m) => m.menu))))
 // 한글 파일 이름을 'download'로 바꿔 버리는 브라우저가 있어 영문으로 짓는다.
 const fileName = computed(() => `camping-joy-${props.camp.date}`)
 const total = computed(() => props.camp.members.reduce((sum, m) => sum + m.equipments.reduce((s, e) => s + e.quantity, 0), 0))

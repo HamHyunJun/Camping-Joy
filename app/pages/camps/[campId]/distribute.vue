@@ -8,7 +8,7 @@
 
     <p v-if="!members.length" class="empty">먼저 멤버를 추가해 주세요.</p>
 
-    <div v-else class="board">
+    <div v-else class="board" :class="{ dragging }">
       <!-- 멤버 -->
       <nav class="panel members-panel" aria-label="멤버">
         <h2 class="panel-title">멤버</h2>
@@ -76,8 +76,20 @@
         <p v-if="!pool.length" class="hint">
           등록된 장비가 없어요. <NuxtLink to="/gear">멤버·장비 등록</NuxtLink>에서 추가해 주세요.
         </p>
-        <div v-for="group in poolGroups" :key="group.category" class="group">
-          <h3 class="group-label">{{ group.label }}</h3>
+        <div v-for="group in poolGroups" :key="group.memberId" class="person-group">
+          <h3 class="person-head">
+            <button type="button" class="person-toggle" :aria-expanded="!isFolded(group.memberId)" @click="toggleFold(group.memberId)">
+              <span class="avatar" aria-hidden="true">{{ group.name.slice(0, 1) }}</span>
+              <span class="person-title">
+                <strong class="person-name">{{ group.name }}</strong>
+                <span class="person-count">장비 {{ group.items.length }}개</span>
+              </span>
+              <span class="chevron" :class="{ open: !isFolded(group.memberId) }" aria-hidden="true" />
+            </button>
+          </h3>
+          <div class="person-body" :class="{ folded: isFolded(group.memberId) }">
+            <div class="person-inner">
+          <p v-if="!group.items.length" class="hint">등록된 장비가 없어요.</p>
           <VueDraggable
             :model-value="group.items"
             tag="ul"
@@ -100,10 +112,7 @@
               class="gear-item pool-item"
               :class="{ 'is-used-up': remaining(item) < 1 }"
             >
-              <span class="gear-name">
-                {{ equipmentLabel.equipmentLabel(item) }}
-                <small class="owner">{{ ownerName(item.ownerId) }}</small>
-              </span>
+              <span class="gear-name">{{ equipmentLabel.equipmentLabel(item) }}</span>
               <span class="qty">남은 {{ remaining(item) }}</span>
               <button
                 type="button"
@@ -116,6 +125,8 @@
               </button>
             </li>
           </VueDraggable>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -155,13 +166,20 @@ onBeforeUnmount(() => onDragEnd())
 const members = computed(() => store.currentCamp?.members ?? [])
 /** 이번 캠핑 멤버들이 등록해 둔 장비 전체 */
 const pool = computed<Equipment[]>(() => members.value.flatMap((m) => gear.findPerson(m.id)?.equipments ?? []))
-const poolGroups = computed(() => groupByCategory.groupByCategory(pool.value))
+/** 멤버별로 묶은 보유 장비. 장비가 없는 멤버도 이름은 보여준다. */
+const poolGroups = computed(() =>
+  members.value.map((m) => ({ memberId: m.id, name: m.name, items: gear.findPerson(m.id)?.equipments ?? [] })),
+)
 /** 공통으로 챙길 장비: 모든 멤버의 담당 장비를 한 목록으로 모은다. 장비는 주인이 챙긴다. */
 const shared = computed<Equipment[]>(() => members.value.flatMap((m) => m.equipments))
 const sharedGroups = computed(() => groupByCategory.groupByCategory(shared.value))
 
-const ownerName = (ownerId: ID): string =>
-  members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
+/** 접어 둔 멤버 */
+const folded = ref<ID[]>([])
+const isFolded = (memberId: ID): boolean => folded.value.includes(memberId)
+const toggleFold = (memberId: ID): void => {
+  folded.value = isFolded(memberId) ? folded.value.filter((id) => id !== memberId) : [...folded.value, memberId]
+}
 
 /** 공통 목록의 항목을 실제로 들고 있는 멤버 */
 const holderOf = (item: Equipment): Member | undefined => members.value.find((m) => m.equipments.includes(item))
@@ -234,6 +252,12 @@ const reset = (): void => {
     grid-template-columns: 180px 1fr 1fr;
     align-items: start;
   }
+
+  // 끌어다 놓는 동안 지나가는 글자가 선택돼 색이 칠해지지 않게 한다.
+  &.dragging {
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }
 
 .panel {
@@ -300,6 +324,119 @@ const reset = (): void => {
   margin-top: var(--space-3);
 }
 
+// 멤버마다 카드로 나눠 서로 구분한다.
+.person-group {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  transition: border-color 0.2s;
+
+  & + & {
+    margin-top: var(--space-3);
+  }
+
+  &:has(.person-toggle[aria-expanded='true']) {
+    border-color: var(--color-primary);
+  }
+}
+
+.person-head {
+  margin: 0;
+}
+
+.person-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s ease-out;
+
+  &:active {
+    transform: scale(0.985);
+  }
+}
+
+.person-group .avatar {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+
+.person-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.person-count {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.chevron {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--color-text-muted);
+  border-bottom: 2px solid var(--color-text-muted);
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+
+  &.open {
+    transform: translateY(3px) rotate(-135deg);
+  }
+}
+
+// 높이를 0fr ↔ 1fr로 바꿔 내용 높이를 몰라도 부드럽게 접고 편다.
+.person-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+
+  &.folded {
+    grid-template-rows: 0fr;
+  }
+}
+
+.person-inner {
+  min-height: 0;
+  padding: 0 var(--space-3) var(--space-3);
+  overflow: hidden;
+  transition:
+    opacity 0.2s,
+    padding-bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s;
+
+  .folded > & {
+    padding-bottom: 0;
+    opacity: 0;
+    visibility: hidden;
+    // 접힌 뒤에 숨겨서 키보드 포커스가 안 들어가게 한다.
+    transition:
+      opacity 0.2s,
+      padding-bottom 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+      visibility 0s 0.28s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .person-body,
+  .person-inner,
+  .chevron {
+    transition: none;
+  }
+}
+
 .group-label {
   margin: 0 0 var(--space-1);
   color: var(--color-text-muted);
@@ -331,6 +468,8 @@ const reset = (): void => {
   border: 1px solid var(--color-border);
   cursor: grab;
   touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
 
   &.is-used-up {
     opacity: 0.45;

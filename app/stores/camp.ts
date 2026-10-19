@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Camp, CampPlace, Equipment, ID, Member, Person, ScheduleItem } from '~/types/camp'
+import { DEFAULT_MEALS } from '~/constants/meals'
 import idUtil from '~/utils/id'
 
 interface CampState {
@@ -276,6 +277,53 @@ export const useCampStore = defineStore('camp', {
       const camp = this.currentCamp
       if (!camp) return
       camp.schedule = camp.schedule?.filter((s) => s.id !== itemId)
+      camp.updatedAt = now()
+    },
+    // 음식
+    /** 끼니를 한 번도 손대지 않은 캠핑에 기본 끼니를 채운다. */
+    seedMenus(): void {
+      const camp = this.currentCamp
+      if (!camp || camp.menus) return
+      camp.menus = DEFAULT_MEALS.map((meal) => ({ ...meal, id: idUtil.createId(), menu: '' }))
+      camp.updatedAt = now()
+    },
+    addMenu(day: number, type: string): void {
+      const camp = this.currentCamp
+      if (!camp) return
+      camp.menus = [...(camp.menus ?? []), { id: idUtil.createId(), day, type, menu: '' }]
+      camp.updatedAt = now()
+    },
+    updateMenu(mealId: ID, menu: string): void {
+      const camp = this.currentCamp
+      const meal = camp?.menus?.find((m) => m.id === mealId)
+      if (!camp || !meal) return
+      meal.menu = menu.trim().slice(0, 60)
+      camp.updatedAt = now()
+    },
+    removeMenu(mealId: ID): void {
+      const camp = this.currentCamp
+      if (!camp) return
+      camp.menus = camp.menus?.filter((m) => m.id !== mealId)
+      camp.updatedAt = now()
+    },
+    addShoppingItem(name: string): void {
+      const camp = this.currentCamp
+      const trimmed = name.trim().slice(0, 40)
+      if (!camp || !trimmed) return
+      camp.shopping = [...(camp.shopping ?? []), { id: idUtil.createId(), name: trimmed, bought: false }]
+      camp.updatedAt = now()
+    },
+    toggleShoppingItem(itemId: ID): void {
+      const camp = this.currentCamp
+      const item = camp?.shopping?.find((s) => s.id === itemId)
+      if (!camp || !item) return
+      item.bought = !item.bought
+      camp.updatedAt = now()
+    },
+    removeShoppingItem(itemId: ID): void {
+      const camp = this.currentCamp
+      if (!camp) return
+      camp.shopping = camp.shopping?.filter((s) => s.id !== itemId)
       camp.updatedAt = now()
     },
     /** 그날 일정을 모두 지우고, 뒤의 날을 하루씩 앞당긴다. */

@@ -1,3 +1,5 @@
+import { MEAL_TYPES } from '~/constants/meals'
+
 export default {
   /** 'YYYY-MM-DD' → '2026년 10월 11일 (토)' */
   formatDate(date: string): string {
@@ -33,6 +35,11 @@ export default {
   /** 일정 정렬: 날 → 시간 순 */
   sortSchedule<T extends { day: number; time: string }>(items: T[]): T[] {
     return [...items].sort((a, b) => a.day - b.day || a.time.localeCompare(b.time))
+  },
+
+  /** 끼니 정렬: 날 → 아침·점심·저녁·야식·간식 순 */
+  sortMeals<T extends { day: number; type: string }>(items: T[]): T[] {
+    return [...items].sort((a, b) => a.day - b.day || MEAL_TYPES.indexOf(a.type) - MEAL_TYPES.indexOf(b.type))
   },
 
   /** 정렬된 일정을 날짜별로 묶는다. */

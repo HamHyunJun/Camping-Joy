@@ -68,48 +68,50 @@
       </div>
       <p v-else class="empty">아래에서 가진 장비를 골라 주세요.</p>
 
-      <div class="presets">
-        <button
-          v-for="preset in EQUIPMENT_PRESETS"
-          :key="preset.name"
-          class="chip"
-          :class="{ active: sizingPreset?.name === preset.name }"
-          type="button"
-          @click="addPreset(preset)"
-        >
-          + {{ preset.name }}
-        </button>
-      </div>
-
-      <div v-if="sizingPreset && sizingGuide" class="size-picker">
-        <!-- 툴팁이 크기 칩을 가리지 않도록, 여기서는 기준을 칩에 바로 적는다. -->
-        <input
-          v-if="equipmentLabel.hasModelName(sizingPreset.name)"
-          v-model="sizingModel"
-          class="input model-input"
-          type="text"
-          maxlength="30"
-          :placeholder="`${sizingPreset.name}명 (선택, 예: 코베아 고스트)`"
-          :aria-label="`${sizingPreset.name}명`"
-        />
-        <p class="size-picker-title">{{ sizingPreset.name }} 크기를 골라 주세요</p>
-        <div class="size-options">
-          <button v-for="option in sizingGuide.options" :key="option.label" class="chip" type="button" @click="addWithSize(option.label)">
-            {{ option.label }}<small v-if="option.description">{{ option.description }}</small>
+      <div ref="adder" class="adder">
+        <div class="presets">
+          <button
+            v-for="preset in EQUIPMENT_PRESETS"
+            :key="preset.name"
+            class="chip"
+            :class="{ active: sizingPreset?.name === preset.name }"
+            type="button"
+            @click="addPreset(preset)"
+          >
+            + {{ preset.name }}
           </button>
         </div>
-      </div>
 
-      <form class="custom-form" @submit.prevent="addCustom">
-        <input v-model="form.name" class="input" type="text" placeholder="직접 입력" maxlength="30" />
-        <SelectMenu
-          :model-value="form.category"
-          :options="categoryOptions"
-          aria-label="카테고리"
-          @update:model-value="form.category = $event as EquipmentCategory"
-        />
-        <button class="btn" type="submit" :disabled="!form.name.trim()">추가</button>
-      </form>
+        <div v-if="sizingPreset && sizingGuide" class="size-picker">
+          <!-- 툴팁이 크기 칩을 가리지 않도록, 여기서는 기준을 칩에 바로 적는다. -->
+          <input
+            v-if="equipmentLabel.hasModelName(sizingPreset.name)"
+            v-model="sizingModel"
+            class="input model-input"
+            type="text"
+            maxlength="30"
+            :placeholder="`${sizingPreset.name}명 (선택, 예: 코베아 고스트)`"
+            :aria-label="`${sizingPreset.name}명`"
+          />
+          <p class="size-picker-title">{{ sizingPreset.name }} 크기를 골라 주세요</p>
+          <div class="size-options">
+            <button v-for="option in sizingGuide.options" :key="option.label" class="chip" type="button" @click="addWithSize(option.label)">
+              {{ option.label }}<small v-if="option.description">{{ option.description }}</small>
+            </button>
+          </div>
+        </div>
+
+        <form class="custom-form" @submit.prevent="addCustom">
+          <input v-model="form.name" class="input" type="text" placeholder="직접 입력" maxlength="30" />
+          <SelectMenu
+            :model-value="form.category"
+            :options="categoryOptions"
+            aria-label="카테고리"
+            @update:model-value="form.category = $event as EquipmentCategory"
+          />
+          <button class="btn" type="submit" :disabled="!form.name.trim()">추가</button>
+        </form>
+      </div>
     </div>
   </article>
 </template>
@@ -128,6 +130,7 @@ const gear = useGearStore()
 const categoryOptions: SelectMenuOption[] = Object.entries(EQUIPMENT_CATEGORY_LABELS).map(([value, label]) => ({ value, label }))
 
 const open = ref(props.initiallyOpen ?? false)
+const adder = ref<HTMLElement>()
 const editingName = ref<string>()
 const form = reactive<{ name: string; category: EquipmentCategory; quantity: number }>({
   name: '',
@@ -150,6 +153,12 @@ const sizingGuide = computed(() => (sizingPreset.value ? equipmentLabel.sizeGuid
 const sizeOptions = (name: string): SelectMenuOption[] =>
   (equipmentLabel.sizeGuideOf(name)?.options ?? []).map((o) => ({ value: o.label, label: o.label, hint: o.description }))
 
+/** 장비가 쌓여 입력부가 밀려도, 추가 직후 입력부가 화면에 계속 보이게 따라간다. */
+const keepAdderInView = async (): Promise<void> => {
+  await nextTick()
+  adder.value?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+}
+
 const addPreset = (preset: EquipmentPreset): void => {
   if (equipmentLabel.sizeGuideOf(preset.name)) {
     sizingPreset.value = sizingPreset.value?.name === preset.name ? undefined : preset
@@ -157,6 +166,7 @@ const addPreset = (preset: EquipmentPreset): void => {
     return
   }
   gear.addEquipment(props.person.id, { ...preset, quantity: 1 })
+  keepAdderInView()
 }
 
 const addWithSize = (size: string): void => {
@@ -164,6 +174,7 @@ const addWithSize = (size: string): void => {
   gear.addEquipment(props.person.id, { ...sizingPreset.value, quantity: 1, size, model: sizingModel.value })
   sizingPreset.value = undefined
   sizingModel.value = ''
+  keepAdderInView()
 }
 
 const addCustom = (): void => {
@@ -171,6 +182,7 @@ const addCustom = (): void => {
   gear.addEquipment(props.person.id, { ...form, quantity: Math.max(1, form.quantity) })
   form.name = ''
   form.quantity = 1
+  keepAdderInView()
 }
 
 const decrease = (item: Equipment): void => {
@@ -366,6 +378,14 @@ watch(
     text-align: center;
     font-weight: 600;
   }
+}
+
+.adder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  // 스크롤해 따라갈 때 화면 바닥에 딱 붙지 않게 여유를 둔다.
+  scroll-margin-bottom: 120px;
 }
 
 .presets {

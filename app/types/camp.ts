@@ -74,6 +74,24 @@ export interface ScheduleItem {
   title: string
 }
 
+/** 끼니 하나와 그때 먹을 메뉴. 예: 1일차 저녁 - 삼겹살 */
+export interface Meal {
+  id: ID
+  /** 몇째 날인지 (1부터) */
+  day: number
+  /** 아침·점심·저녁·야식·간식 */
+  type: string
+  menu: string
+}
+
+/** 장볼 것. 음식뿐 아니라 물·술 같은 것도 같은 목록에 담는다. */
+export interface ShoppingItem {
+  id: ID
+  name: string
+  /** 장을 봤는지 */
+  bought: boolean
+}
+
 /** 캠핑장. 주소는 네이버 지도로 위치를 보여 줄 때 쓴다. */
 export interface CampPlace {
   name: string
@@ -95,6 +113,10 @@ export interface Camp {
   readyItems?: string[]
   /** 시간별 일정표 (이전에 저장된 캠핑에는 없을 수 있음) */
   schedule?: ScheduleItem[]
+  /** 끼니별 메뉴 (이전에 저장된 캠핑에는 없을 수 있음) */
+  menus?: Meal[]
+  /** 장볼 것 (이전에 저장된 캠핑에는 없을 수 있음) */
+  shopping?: ShoppingItem[]
   /** 서버에 올라간 적이 있는지. 서버에 없는데 true면 다른 사람이 지운 캠핑이다. */
   synced?: boolean
   createdAt: string

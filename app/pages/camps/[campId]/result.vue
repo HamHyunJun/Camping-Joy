@@ -154,7 +154,7 @@
     </section>
 
     <div class="page-actions">
-      <NuxtLink class="btn" :to="`/camps/${route.params.campId}/distribute`">이전</NuxtLink>
+      <NuxtLink class="btn" :to="`/camps/${route.params.campId}/meals`">이전</NuxtLink>
       <NuxtLink class="btn btn-primary" to="/">전체 캠핑으로</NuxtLink>
     </div>
 

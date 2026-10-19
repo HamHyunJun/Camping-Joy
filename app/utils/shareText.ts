@@ -34,6 +34,19 @@ export default {
         for (const item of group.items) lines.push(`${item.time} ${item.title}`)
       }
     }
+    const menus = format.scheduleGroups(format.sortMeals((camp.menus ?? []).filter((m) => m.menu)))
+    if (menus.length) {
+      lines.push('')
+      lines.push('🍽 음식')
+      for (const group of menus) {
+        for (const meal of group.items) lines.push(`${group.day}일차 ${meal.type}: ${meal.menu}`)
+      }
+    }
+    if (camp.shopping?.length) {
+      lines.push('')
+      lines.push('🛒 장볼 것')
+      lines.push(camp.shopping.map((s) => s.name).join(', '))
+    }
     lines.push('')
     lines.push('🎒 누가 무엇을 챙기나요')
     for (const member of camp.members) {

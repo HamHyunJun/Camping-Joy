@@ -111,6 +111,16 @@ export const useCampStore = defineStore('camp', {
       camp.updatedAt = now()
       return member
     },
+    /** 장비 등록에 남기지 않는 게스트를 이번 캠핑에만 넣는다. */
+    addGuest(name: string): Member | undefined {
+      const camp = this.currentCamp
+      const trimmed = name.trim()
+      if (!camp || !trimmed) return undefined
+      const member: Member = { id: idUtil.createId(), name: trimmed, equipments: [], guest: true }
+      camp.members.push(member)
+      camp.updatedAt = now()
+      return member
+    },
     removeMember(memberId: ID): void {
       const camp = this.currentCamp
       if (!camp) return
@@ -209,6 +219,19 @@ export const useCampStore = defineStore('camp', {
       const bringing = member.equipments.find((e) => e.id === owned.id)
       if (bringing) bringing.quantity += 1
       else member.equipments.push({ ...owned, quantity: 1 })
+      camp.updatedAt = now()
+    },
+    /** 게스트가 가져오는 장비를 직접 적는다. 같은 장비면 수량만 늘린다. */
+    addGuestEquipment(memberId: ID, input: Pick<Equipment, 'name' | 'category' | 'size' | 'model'>): void {
+      const camp = this.currentCamp
+      const member = camp?.members.find((m) => m.id === memberId && m.guest)
+      const name = input.name.trim().slice(0, 30)
+      if (!camp || !member || !name) return
+      const same = member.equipments.find(
+        (e) => e.name === name && e.category === input.category && e.size === input.size && e.model === input.model,
+      )
+      if (same) same.quantity += 1
+      else member.equipments.push({ id: idUtil.createId(), name, category: input.category, quantity: 1, ownerId: memberId, ...(input.size ? { size: input.size } : {}), ...(input.model ? { model: input.model } : {}) })
       camp.updatedAt = now()
     },
     /** 담당 장비에서 1개 뺀다. 0개가 되면 목록에서 지운다. */

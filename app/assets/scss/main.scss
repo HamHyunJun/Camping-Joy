@@ -1,5 +1,12 @@
 @use 'tokens';
 
+// 도현체는 숫자·영문·×가 위로 뜨고 좁아 보여서, 이 글자들만 시스템 기본 글꼴로 그린다. 한글은 영향 없음.
+@font-face {
+  font-family: 'Base Latin';
+  src: local('Helvetica Neue'), local('Roboto'), local('Arial');
+  unicode-range: U+0020-007E, U+00D7;
+}
+
 *,
 *::before,
 *::after {
@@ -11,7 +18,7 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
-  font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  font-family: 'Base Latin', 'Do Hyeon', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   /* 웹뷰에서 입력창 포커스 시 확대되지 않도록 16px 이상 유지 */
   font-size: 16px;
   line-height: 1.5;

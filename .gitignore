@@ -18,3 +18,5 @@ supabase/.temp
 .claude/
 graphify-out/
 skills-lock.json
+CHANGELOG.md
+docs/IMPROVEMENTS.md

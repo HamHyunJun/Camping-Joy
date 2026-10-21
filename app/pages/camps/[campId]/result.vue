@@ -30,14 +30,7 @@
           <dt>챙길 장비</dt>
           <dd>{{ totalQuantity }}개</dd>
         </div>
-        <div>
-          <dt>준비 완료</dt>
-          <dd>{{ readyCount }} / {{ rows.length }}</dd>
-        </div>
       </dl>
-      <div class="progress" role="progressbar" :aria-valuenow="readyCount" :aria-valuemax="rows.length">
-        <span :style="{ width: rows.length ? `${(readyCount / rows.length) * 100}%` : '0%' }" />
-      </div>
     </article>
 
     <!-- 일정 -->
@@ -87,17 +80,13 @@
           <p v-if="!member.equipments.length" class="muted">맡은 장비가 없어요.</p>
           <div v-for="group in groupByCategory.groupByCategory(member.equipments)" :key="group.category" class="group">
             <h4 class="group-label">{{ group.label }}</h4>
-            <ul class="plain-list">
-              <li v-for="item in group.items" :key="item.id" :class="{ ready: store.isReady(member.id, item.id) }">
-                <label>
-                  <input
-                    type="checkbox"
-                    :checked="store.isReady(member.id, item.id)"
-                    @change="store.toggleReady(member.id, item.id)"
-                  />
-                  {{ equipmentLabel.equipmentLabel(item) }} × {{ item.quantity }}
-                  <small v-if="item.ownerId !== member.id" class="sub">{{ ownerName(item.ownerId) }} 장비</small>
-                </label>
+            <ul class="gear-rows">
+              <li v-for="item in group.items" :key="item.id" class="gear-row">
+                <span class="gear-text">
+                  <span class="gear-title">{{ equipmentLabel.equipmentLabel(item) }}</span>
+                  <small v-if="item.ownerId !== member.id" class="gear-owner">{{ ownerName(item.ownerId) }} 장비</small>
+                </span>
+                <span class="gear-qty">×{{ item.quantity }}</span>
               </li>
             </ul>
           </div>
@@ -142,7 +131,6 @@ const rows = computed<ResultRow[]>(() =>
   ),
 )
 const totalQuantity = computed(() => rows.value.reduce((sum, row) => sum + row.equipment.quantity, 0))
-const readyCount = computed(() => rows.value.filter((row) => store.isReady(row.member.id, row.equipment.id)).length)
 const ownerName = (ownerId: ID): string =>
   members.value.find((m) => m.id === ownerId)?.name ?? gear.findPerson(ownerId)?.name ?? ''
 
@@ -195,7 +183,7 @@ const memberTotal = (member: Member): number => member.equipments.reduce((sum, e
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
   margin: var(--space-4) 0 var(--space-3);
 
@@ -214,20 +202,6 @@ const memberTotal = (member: Member): number => member.equipments.reduce((sum, e
   dd {
     margin: 2px 0 0;
     font-weight: 700;
-  }
-}
-
-.progress {
-  height: 6px;
-  overflow: hidden;
-  border-radius: 3px;
-  background: var(--color-border);
-
-  span {
-    display: block;
-    height: 100%;
-    background: var(--color-primary);
-    transition: width 0.2s;
   }
 }
 
@@ -298,12 +272,6 @@ const memberTotal = (member: Member): number => member.equipments.reduce((sum, e
   }
 }
 
-.sub {
-  display: block;
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
 .member-cards {
   display: grid;
   gap: var(--space-2);
@@ -334,31 +302,46 @@ const memberTotal = (member: Member): number => member.equipments.reduce((sum, e
   font-weight: 600;
 }
 
-.plain-list {
+.gear-rows {
+  display: grid;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
+}
 
-  li {
-    padding: 6px 0;
-  }
+.gear-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 32px;
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
+}
 
-  li.ready {
-    color: var(--color-text-muted);
-    text-decoration: line-through;
-  }
+.gear-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
 
-  label {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
-    cursor: pointer;
-  }
+.gear-owner {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
 
-  .sub {
-    display: inline;
-  }
+.gear-qty {
+  flex: none;
+  min-width: 34px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 .muted {

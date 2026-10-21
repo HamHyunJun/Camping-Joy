@@ -5,9 +5,6 @@ export interface CampProgress {
   /** 이어서 할 단계 */
   step: CampStep['path']
   label: string
-  /** 챙길 장비 항목 수와 준비 완료 항목 수 (결과 화면과 같은 기준) */
-  total: number
-  ready: number
 }
 
 const isStepComplete = (camp: Camp, path: CampStep['path']): boolean => {
@@ -55,22 +52,14 @@ export default {
   /** 캠핑 목록에 보여줄 진행 상태 */
   campProgress(camp: Camp): CampProgress {
     const step = lastVisitableStep(camp)
-    let total = 0
-    let ready = 0
-    for (const member of camp.members) {
-      for (const item of member.equipments) {
-        total += 1
-        if (camp.readyItems?.includes(`${member.id}:${item.id}`)) ready += 1
-      }
-    }
     const labels: Record<CampStep['path'], string> = {
       info: '캠핑 정보 입력 중',
       members: '멤버 고르는 중',
       distribute: '장비 배분 중',
       schedule: '일정 짜는 중',
       meals: '음식 정하는 중',
-      result: ready === total ? '준비 완료' : '준비 중',
+      result: '계획 완료',
     }
-    return { step, label: labels[step], total, ready }
+    return { step, label: labels[step] }
   },
 }

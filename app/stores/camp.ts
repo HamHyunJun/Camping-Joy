@@ -267,19 +267,6 @@ export const useCampStore = defineStore('camp', {
       camp.updatedAt = now()
     },
 
-    // 결과: 담당 장비 준비 완료 체크
-    isReady(memberId: ID, equipmentId: ID): boolean {
-      return this.currentCamp?.readyItems?.includes(readyKey(memberId, equipmentId)) ?? false
-    },
-    toggleReady(memberId: ID, equipmentId: ID): void {
-      const camp = this.currentCamp
-      if (!camp) return
-      const key = readyKey(memberId, equipmentId)
-      const items = camp.readyItems ?? []
-      camp.readyItems = items.includes(key) ? items.filter((k) => k !== key) : [...items, key]
-      camp.updatedAt = now()
-    },
-
     // 일정
     addScheduleItem(input: Omit<ScheduleItem, 'id'>): void {
       const camp = this.currentCamp
@@ -334,13 +321,6 @@ export const useCampStore = defineStore('camp', {
       const trimmed = name.trim().slice(0, 40)
       if (!camp || !trimmed) return
       camp.shopping = [...(camp.shopping ?? []), { id: idUtil.createId(), name: trimmed, bought: false }]
-      camp.updatedAt = now()
-    },
-    toggleShoppingItem(itemId: ID): void {
-      const camp = this.currentCamp
-      const item = camp?.shopping?.find((s) => s.id === itemId)
-      if (!camp || !item) return
-      item.bought = !item.bought
       camp.updatedAt = now()
     },
     removeShoppingItem(itemId: ID): void {

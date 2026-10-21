@@ -12,13 +12,9 @@
         </span>
         <span class="meta">{{ format.formatDate(camp.date) }} · 멤버 {{ camp.members.length }}명</span>
         <span class="status">
-          <span class="status-label" :class="{ complete: progress.label === '준비 완료' }">
+          <span class="status-label" :class="{ complete: progress.label === '계획 완료' }">
             {{ progress.label }}
           </span>
-          <template v-if="progress.step === 'result' && progress.total">
-            <span class="bar"><span :style="{ width: `${(progress.ready / progress.total) * 100}%` }" /></span>
-            <span class="ratio">{{ progress.ready }}/{{ progress.total }}</span>
-          </template>
         </span>
       </span>
     </NuxtLink>
@@ -158,25 +154,6 @@ const dateParts = (date: string): { month: string; day: string } => {
     background: var(--color-primary-soft);
     color: var(--color-primary);
   }
-}
-
-.bar {
-  flex: 1;
-  height: 6px;
-  max-width: 140px;
-  border-radius: 3px;
-  background: var(--color-border);
-  overflow: hidden;
-
-  span {
-    display: block;
-    height: 100%;
-    background: var(--color-primary);
-  }
-}
-
-.ratio {
-  color: var(--color-text-muted);
 }
 
 .delete {

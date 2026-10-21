@@ -44,7 +44,6 @@
     <section class="card block" aria-labelledby="shopping-title">
       <h2 id="shopping-title" class="block-title">
         장보기
-        <span v-if="shopping.length" class="count">{{ boughtCount }}/{{ shopping.length }}</span>
       </h2>
 
       <form class="add-row" @submit.prevent="addItem">
@@ -53,11 +52,8 @@
       </form>
 
       <ul v-if="shopping.length" class="shopping-list">
-        <li v-for="item in shopping" :key="item.id" class="shopping-item" :class="{ bought: item.bought }">
-          <label class="check">
-            <input type="checkbox" :checked="item.bought" @change="store.toggleShoppingItem(item.id)" />
-            <span>{{ item.name }}</span>
-          </label>
+        <li v-for="item in shopping" :key="item.id" class="shopping-item">
+          <span class="item-name">{{ item.name }}</span>
           <button class="remove" type="button" :aria-label="`${item.name} 지우기`" @click="store.removeShoppingItem(item.id)">×</button>
         </li>
       </ul>
@@ -88,7 +84,6 @@ const newItem = ref('')
 const camp = computed(() => store.currentCamp)
 const mealGroups = computed(() => format.scheduleGroups(format.sortMeals(camp.value?.menus ?? [])))
 const shopping = computed(() => camp.value?.shopping ?? [])
-const boughtCount = computed(() => shopping.value.filter((s) => s.bought).length)
 
 const addItem = (): void => {
   if (!newItem.value.trim()) return
@@ -110,15 +105,6 @@ store.seedMenus()
   gap: var(--space-2);
   margin: 0 0 var(--space-3);
   font-size: 16px;
-}
-
-.count {
-  padding: 0 8px;
-  border-radius: 999px;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-size: 12px;
-  line-height: 20px;
 }
 
 .meal-list,
@@ -191,34 +177,17 @@ store.seedMenus()
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
-  transition: opacity 0.2s;
-
-  &.bought {
-    opacity: 0.55;
-
-    .check span {
-      text-decoration: line-through;
-    }
-  }
 }
 
-.check {
+.item-name {
   display: flex;
   flex: 1;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
   min-height: 44px;
-  cursor: pointer;
   word-break: keep-all;
   overflow-wrap: anywhere;
-
-  input {
-    flex: none;
-    width: 18px;
-    height: 18px;
-    accent-color: var(--color-primary);
-  }
 }
 
 .remove {

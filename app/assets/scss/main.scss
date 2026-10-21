@@ -35,13 +35,6 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-// 큰 모니터에서는 글자가 작고 거칠어 보여서 화면 전체를 조금 키운다. (글자 크기를 px로 쓰므로 zoom 사용)
-@media (min-width: 1700px) {
-  html {
-    zoom: 1.2;
-  }
-}
-
 a {
   color: inherit;
 }

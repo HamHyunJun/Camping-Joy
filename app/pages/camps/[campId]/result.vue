@@ -86,7 +86,7 @@
                   <span class="gear-title">{{ equipmentLabel.equipmentLabel(item) }}</span>
                   <small v-if="item.ownerId !== member.id" class="gear-owner">{{ ownerName(item.ownerId) }} 장비</small>
                 </span>
-                <span class="gear-qty">×{{ item.quantity }}</span>
+                <span class="gear-qty"><span>×</span><span>{{ item.quantity }}</span></span>
               </li>
             </ul>
           </div>
@@ -353,6 +353,11 @@ const memberTotal = (member: Member): number => member.equipments.reduce((sum, e
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: center;
+
+  // ×와 숫자 사이를 벌린다.
+  span + span {
+    margin-left: 3px;
+  }
 }
 
 .muted {

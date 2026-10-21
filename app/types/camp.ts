@@ -38,6 +38,8 @@ export interface Member {
   id: ID
   name: string
   equipments: Equipment[]
+  /** 장비 등록에 없는 이번 캠핑 한정 게스트. 장비는 배분 화면에서 바로 적는다. */
+  guest?: boolean
 }
 
 /** 이번 캠핑에 필요한 장비 */

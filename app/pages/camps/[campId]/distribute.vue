@@ -40,7 +40,7 @@
                       type="button"
                       class="round"
                       aria-label="하나 더"
-                      :disabled="!ownedOf(item.id) || remaining(ownedOf(item.id)!) < 1"
+                      :disabled="!holderOf(item)?.guest && (!ownedOf(item.id) || remaining(ownedOf(item.id)!) < 1)"
                       @click="addAgain(item)"
                     >
                       +
@@ -82,15 +82,30 @@
               <span class="avatar" aria-hidden="true">{{ group.name.slice(0, 1) }}</span>
               <span class="person-title">
                 <strong class="person-name">{{ group.name }}</strong>
-                <span class="person-count">장비 {{ group.items.length }}개</span>
+                <span class="person-count">
+                  <template v-if="group.guest">게스트 · 장비 {{ assignedCount(group.memberId) }}개</template>
+                  <template v-else>장비 {{ group.items.length }}개</template>
+                </span>
               </span>
               <span class="chevron" :class="{ open: !isFolded(group.memberId) }" aria-hidden="true" />
             </button>
           </h3>
           <div class="person-body" :class="{ folded: isFolded(group.memberId) }">
             <div class="person-inner">
-          <p v-if="!group.items.length" class="hint">등록된 장비가 없어요.</p>
+          <form v-if="group.guest" class="guest-form" @submit.prevent="addGuestGear(group.memberId)">
+            <input
+              v-model="guestForm(group.memberId).name"
+              class="input"
+              type="text"
+              maxlength="30"
+              placeholder="게스트가 가져올 장비"
+              :aria-label="`${group.name} 장비 이름`"
+            />
+            <button class="btn" type="submit" :disabled="!guestForm(group.memberId).name.trim()">추가</button>
+          </form>
+          <p v-else-if="!group.items.length" class="hint">등록된 장비가 없어요.</p>
           <VueDraggable
+            v-if="!group.guest"
             :model-value="group.items"
             tag="ul"
             class="gear-list"
@@ -168,8 +183,17 @@ const members = computed(() => store.currentCamp?.members ?? [])
 const pool = computed<Equipment[]>(() => members.value.flatMap((m) => gear.findPerson(m.id)?.equipments ?? []))
 /** 멤버별로 묶은 보유 장비. 장비가 없는 멤버도 이름은 보여준다. */
 const poolGroups = computed(() =>
-  members.value.map((m) => ({ memberId: m.id, name: m.name, items: gear.findPerson(m.id)?.equipments ?? [] })),
+  members.value.map((m) => ({ memberId: m.id, name: m.name, guest: !!m.guest, items: gear.findPerson(m.id)?.equipments ?? [] })),
 )
+
+// 게스트는 장비 등록 없이 여기서 이름만 적는다. 카테고리는 '기타'로 둔다.
+const guestForms = reactive<Record<ID, { name: string }>>({})
+const guestForm = (memberId: ID): { name: string } => (guestForms[memberId] ??= { name: '' })
+const addGuestGear = (memberId: ID): void => {
+  const form = guestForm(memberId)
+  store.addGuestEquipment(memberId, { name: form.name, category: 'etc' })
+  form.name = ''
+}
 /** 공통으로 챙길 장비: 모든 멤버의 담당 장비를 한 목록으로 모은다. 장비는 주인이 챙긴다. */
 const shared = computed<Equipment[]>(() => members.value.flatMap((m) => m.equipments))
 const sharedGroups = computed(() => groupByCategory.groupByCategory(shared.value))
@@ -193,6 +217,11 @@ const add = (owned: Equipment): void => {
 }
 
 const addAgain = (item: Equipment): void => {
+  const holder = holderOf(item)
+  if (holder?.guest) {
+    store.addGuestEquipment(holder.id, item)
+    return
+  }
   const owned = ownedOf(item.id)
   if (owned) add(owned)
 }
@@ -318,6 +347,11 @@ const reset = (): void => {
     background: var(--color-border);
     color: var(--color-text-muted);
   }
+}
+
+.guest-form {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .group + .group {

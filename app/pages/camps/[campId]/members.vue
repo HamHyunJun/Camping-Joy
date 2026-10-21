@@ -37,10 +37,23 @@
       </button>
     </div>
 
+    <form class="add-form guest-form" @submit.prevent="addGuest">
+      <input
+        v-model="guestName"
+        class="input"
+        type="text"
+        placeholder="게스트 이름 (이번 캠핑에만 추가)"
+        maxlength="20"
+        autocomplete="off"
+        aria-label="게스트 이름"
+      />
+      <button class="btn" type="submit" :disabled="!guestName.trim()">게스트 추가</button>
+    </form>
+
     <ul v-if="members.length" class="member-list card">
       <li v-for="member in members" :key="member.id" class="member-item">
         <span class="avatar">{{ member.name.slice(0, 1) }}</span>
-        <span class="name">{{ member.name }}</span>
+        <span class="name">{{ member.name }}<small v-if="member.guest" class="guest-tag">게스트</small></span>
         <span class="count">담당 장비 {{ bringingCount(member) }}개</span>
         <button class="btn btn-text btn-danger" type="button" @click="remove(member)">빼기</button>
       </li>
@@ -65,6 +78,7 @@ const gear = useGearStore()
 const route = useRoute()
 
 const newName = ref('')
+const guestName = ref('')
 const addError = ref('')
 
 const members = computed(() => store.currentCamp?.members ?? [])
@@ -95,6 +109,18 @@ const addByName = (): void => {
   addError.value = ''
 }
 
+const addGuest = (): void => {
+  const name = guestName.value.trim()
+  if (!name) return
+  if (members.value.some((m) => m.name === name)) {
+    addError.value = '이미 추가된 멤버예요.'
+    return
+  }
+  store.addGuest(name)
+  guestName.value = ''
+  addError.value = ''
+}
+
 const remove = (member: Member): void => {
   const message = member.equipments.length
     ? `${member.name}님과 담당으로 정한 장비를 빼시겠어요?`
@@ -116,6 +142,16 @@ const reset = (): void => {
   display: flex;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
+}
+
+.guest-form {
+  margin-top: var(--space-3);
+}
+
+.guest-tag {
+  margin-left: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 
 .candidates {

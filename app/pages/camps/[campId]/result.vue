@@ -317,6 +317,17 @@ const memberTotal = (member: Member): number => member.equipments.reduce((sum, e
   min-height: 32px;
   padding: 3px var(--space-2);
   border-radius: var(--radius-sm);
+
+  // 카테고리 이름과 구분되도록 장비 앞에 작은 점을 둔다.
+  &::before {
+    content: '';
+    flex: none;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    opacity: 0.55;
+  }
 }
 
 .gear-text {

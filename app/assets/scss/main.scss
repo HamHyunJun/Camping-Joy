@@ -1,10 +1,18 @@
 @use 'tokens';
 
-// 도현체는 숫자·영문·×가 위로 뜨고 좁아 보여서, 이 글자들만 시스템 기본 글꼴로 그린다. 한글은 영향 없음.
+// 펴진고딕(SIL OFL). 불러오지 못하면 시스템 글꼴로 대체된다.
 @font-face {
-  font-family: 'Base Latin';
-  src: local('Helvetica Neue'), local('Roboto'), local('Arial');
-  unicode-range: U+0020-007E, U+00D7;
+  font-family: 'Pyeojin Gothic';
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/Jihwan-Suh/PyeojinGothic@main/fonts/web/woff2/PyeojinGothic-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pyeojin Gothic';
+  font-weight: 700;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/gh/Jihwan-Suh/PyeojinGothic@main/fonts/web/woff2/PyeojinGothic-Bold.woff2') format('woff2');
 }
 
 *,
@@ -18,7 +26,7 @@ body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
-  font-family: 'Base Latin', 'Do Hyeon', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  font-family: 'Pyeojin Gothic', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   /* 웹뷰에서 입력창 포커스 시 확대되지 않도록 16px 이상 유지 */
   font-size: 16px;
   line-height: 1.5;

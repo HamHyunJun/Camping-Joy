@@ -4,43 +4,44 @@
     <div v-if="menuOpen" class="menu-backdrop" @click="menuOpen = false" />
     <div class="top">
       <header class="header">
+        <!-- 캠핑 만드는 중에는 로고 앞에 모임 홈으로 가는 뒤로가기 -->
+        <NuxtLink v-if="campId" :to="group.path()" class="back" aria-label="캠핑 목록으로"><span class="back-icon" aria-hidden="true" /></NuxtLink>
         <NuxtLink to="/" class="logo">
           <span class="logo-mark"><img :src="tentIcon" alt="" width="18" height="18" /></span>
           Camping&amp;Joy
         </NuxtLink>
-        <!-- PC: 헤더에 메뉴 나열 -->
-        <nav class="header-nav" aria-label="메뉴">
-          <NuxtLink
-            v-for="item in menuItems"
-            :key="item.to"
-            :to="item.to"
-            class="header-nav-item"
-            :class="{ active: route.path === item.to }"
+        <div class="menu-wrap">
+          <button
+            class="menu-button"
+            type="button"
+            aria-haspopup="menu"
+            :aria-expanded="menuOpen"
+            aria-label="메뉴"
+            @click="menuOpen = !menuOpen"
           >
-            {{ item.label }}
-          </NuxtLink>
-        </nav>
-        <!-- 모바일: 더보기 아이콘 -->
-        <button
-          class="menu-button"
-          type="button"
-          :aria-expanded="menuOpen"
-          aria-label="메뉴"
-          @click="menuOpen = !menuOpen"
-        >
-          <img :src="menuIcon" alt="" width="24" height="24" />
-        </button>
+            <img :src="menuIcon" alt="" width="24" height="24" />
+          </button>
+          <Transition name="menu">
+            <nav v-if="menuOpen" class="menu" aria-label="내 메뉴">
+              <NuxtLink
+                v-for="item in menuItems"
+                :key="item.to"
+                :to="item.to"
+                class="menu-item"
+                :class="{ active: route.path === item.to }"
+              >
+                {{ item.label }}
+              </NuxtLink>
+              <button type="button" class="menu-item logout" @click="logout">로그아웃</button>
+            </nav>
+          </Transition>
+        </div>
       </header>
 
-      <nav v-if="menuOpen" class="menu">
-        <NuxtLink
-          v-for="item in menuItems"
-          :key="item.to"
-          :to="item.to"
-          class="menu-item"
-          :class="{ active: route.path === item.to }"
-        >
-          {{ item.label }}
+      <!-- 모임 안: 전체 캠핑 / 멤버·장비 등록. 캠핑을 만드는 중에는 아래 단계 표시줄이 대신한다. -->
+      <nav v-if="tabs.length" class="tabs" aria-label="모임 메뉴">
+        <NuxtLink v-for="tab in tabs" :key="tab.to" :to="tab.to" class="tab" :class="{ active: route.path === tab.to }">
+          {{ tab.label }}
         </NuxtLink>
       </nav>
 
@@ -59,19 +60,46 @@ import menuIcon from '~/assets/icons/menu.svg'
 import tentIcon from '~/assets/icons/tent.svg'
 
 const route = useRoute()
+const auth = useAuthStore()
+const group = useGroupStore()
 
 const menuOpen = ref(false)
-const menuItems = [
-  { to: '/', label: '전체 캠핑' },
-  { to: '/gear', label: '멤버·장비 등록' },
-]
-
 const campId = computed(() => {
   const id = route.params.campId
   return typeof id === 'string' ? id : undefined
 })
 
+const inGroup = computed(() => typeof route.params.groupId === 'string')
+
+// 햄버거 메뉴. 모임 관리는 모임 안에서 관리자·운영진에게만 보인다.
+const menuItems = computed(() => [
+  { to: '/profile', label: '내 정보' },
+  ...(inGroup.value && group.isStaff ? [{ to: group.path('/manage'), label: '모임 관리' }] : []),
+])
+
+const tabs = computed(() =>
+  inGroup.value && !campId.value
+    ? [
+        { to: group.path(), label: '전체 캠핑' },
+        { to: group.path('/gear'), label: '멤버·장비 등록' },
+      ]
+    : [],
+)
+
+const logout = async (): Promise<void> => {
+  await auth.signOut()
+  await navigateTo('/login')
+}
+
+const closeOnEsc = (event: KeyboardEvent): void => {
+  if (event.key === 'Escape') menuOpen.value = false
+}
+
+onBeforeUnmount(() => window.removeEventListener('keydown', closeOnEsc))
+
 watch(() => route.fullPath, () => (menuOpen.value = false))
+// 메뉴가 열려 있는 동안만 Esc를 받는다.
+watch(menuOpen, (open) => (open ? window.addEventListener('keydown', closeOnEsc) : window.removeEventListener('keydown', closeOnEsc)))
 </script>
 
 <style scoped lang="scss">
@@ -104,6 +132,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
 
 .logo {
   display: flex;
+  flex: 1;
   align-items: center;
   gap: var(--space-2);
   font-weight: 800;
@@ -126,51 +155,82 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   }
 }
 
-.header-nav {
-  display: flex;
-  gap: var(--space-1);
+.menu-wrap {
+  position: relative;
+}
 
-  @include mobile {
-    display: none;
+.menu-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  &:hover {
+    background: var(--color-surface-muted);
+  }
+
+  &:active {
+    transform: scale(0.92);
   }
 }
 
-.header-nav-item {
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--space-3);
+}
+
+.tab {
   padding: var(--space-2) var(--space-3);
-  border-radius: 8px;
+  border-bottom: 2px solid transparent;
   color: var(--color-text-muted);
+  font-size: 14px;
   text-decoration: none;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
 
   &:hover {
     color: var(--color-text);
   }
 
   &.active {
-    background: var(--color-primary-soft);
+    border-bottom-color: var(--color-primary);
     color: var(--color-primary);
     font-weight: 600;
   }
 }
 
-.menu-button {
-  display: none;
+.back {
+  display: grid;
+  flex: none;
   place-items: center;
   width: 44px;
   height: 44px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
+  margin-left: calc(var(--space-2) * -1);
+  border-radius: 10px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  @include mobile {
-    display: grid;
+  &:hover {
+    background: var(--color-surface-muted);
   }
-}
 
-.menu-backdrop,
-.menu {
-  @include pc {
-    display: none !important;
+  &:active {
+    transform: scale(0.92);
   }
 }
 
@@ -194,9 +254,10 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
 
 .menu {
   position: absolute;
-  top: calc(var(--header-height) + var(--safe-top));
-  right: var(--space-2);
+  top: calc(100% + var(--space-1));
+  right: 0;
   z-index: 30;
+  transform-origin: top right;
   display: flex;
   flex-direction: column;
   min-width: 200px;
@@ -217,6 +278,34 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
     color: var(--color-primary);
     font-weight: 600;
   }
+}
+
+.menu-enter-active,
+.menu-leave-active {
+  transition:
+    opacity 140ms ease,
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.menu-enter-from,
+.menu-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-enter-active,
+  .menu-leave-active {
+    transition: none;
+  }
+}
+
+.logout {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .content {

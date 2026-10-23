@@ -8,8 +8,6 @@ interface CampState {
   currentCampId: ID | undefined
   /** 이 기기를 쓰는 사람(등록된 Person.id). '내가 참여한 캠핑'을 고를 때 쓴다. */
   meId: ID | undefined
-  /** 이 기기에 있던 캠핑을 서버에 한 번 올렸는지 (처음 연결할 때만 올린다) */
-  syncedOnce: boolean
 }
 
 export interface CampInfoInput {
@@ -33,7 +31,6 @@ export const useCampStore = defineStore('camp', {
     camps: [],
     currentCampId: undefined,
     meId: undefined,
-    syncedOnce: false,
   }),
   getters: {
     currentCamp: (state): Camp | undefined =>
@@ -146,17 +143,6 @@ export const useCampStore = defineStore('camp', {
     /** 이 사람이 멤버로 들어 있는 캠핑 수 */
     countCampsWithPerson(personId: ID): number {
       return this.camps.filter((camp) => camp.members.some((m) => m.id === personId)).length
-    },
-    /** 같은 사람이 다른 id로 등록돼 있을 때(서버 목록과 처음 합칠 때) 캠핑 멤버 id를 바꾼다. */
-    remapPerson(oldId: ID, newId: ID): void {
-      for (const camp of this.camps) {
-        if (camp.members.some((m) => m.id === newId)) continue
-        const member = camp.members.find((m) => m.id === oldId)
-        if (!member) continue
-        member.id = newId
-        for (const item of member.equipments) if (item.ownerId === oldId) item.ownerId = newId
-        camp.readyItems = camp.readyItems?.map((key) => (key.startsWith(`${oldId}:`) ? `${newId}${key.slice(oldId.length)}` : key))
-      }
     },
     /** 등록에서 사람을 지우면 모든 캠핑에서 멤버와 그 사람의 장비를 뺀다. */
     removePersonFromCamps(personId: ID): void {

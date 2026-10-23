@@ -4,7 +4,10 @@
       <button type="button" class="toggle" :aria-expanded="open" @click="open = !open">
         <span class="avatar">{{ person.name.slice(0, 1) }}</span>
         <span class="title">
-          <strong class="name">{{ person.name }}</strong>
+          <strong class="name">
+            {{ person.name }}
+            <RoleBadge :role="group.roleOfUser(person.userId)" />
+          </strong>
           <span class="summary">
             장비 {{ totalCount }}개<template v-if="!open && categorySummary"> · {{ categorySummary }}</template>
           </span>
@@ -15,14 +18,14 @@
     </header>
 
     <div v-if="open" class="details">
-      <div class="person-actions">
+      <div v-if="editable" class="person-actions">
         <form v-if="editingName !== undefined" class="name-form" @submit.prevent="saveName">
           <input v-model="editingName" class="input" type="text" maxlength="20" />
           <button class="btn" type="submit">저장</button>
         </form>
         <template v-else>
           <button class="btn btn-text" type="button" @click="editingName = person.name">이름 수정</button>
-          <button class="btn btn-text btn-danger" type="button" @click="removePerson">삭제</button>
+          <button v-if="gear.canRemovePerson" class="btn btn-text btn-danger" type="button" @click="removePerson">삭제</button>
         </template>
       </div>
 
@@ -37,7 +40,7 @@
               <span class="gear-name">
                 {{ item.name }}
                 <SelectMenu
-                  v-if="equipmentLabel.sizeGuideOf(item.name)"
+                  v-if="editable && equipmentLabel.sizeGuideOf(item.name)"
                   class="size-select"
                   size="sm"
                   :model-value="item.size"
@@ -46,14 +49,16 @@
                   aria-label="크기"
                   @update:model-value="gear.setEquipmentSize(person.id, item.id, $event)"
                 />
+                <span v-else-if="item.size" class="static-value">{{ item.size }}</span>
               </span>
-              <div class="stepper">
+              <div v-if="editable" class="stepper">
                 <button type="button" aria-label="하나 빼기" @click="decrease(item)">−</button>
                 <span>{{ item.quantity }}</span>
                 <button type="button" aria-label="하나 더하기" @click="gear.setEquipmentQuantity(person.id, item.id, item.quantity + 1)">+</button>
               </div>
+              <span v-else class="static-value">× {{ item.quantity }}</span>
               <input
-                v-if="equipmentLabel.hasModelName(item.name)"
+                v-if="editable && equipmentLabel.hasModelName(item.name)"
                 class="input model-input"
                 type="text"
                 maxlength="30"
@@ -62,13 +67,14 @@
                 aria-label="텐트명"
                 @change="gear.setEquipmentModel(person.id, item.id, ($event.target as HTMLInputElement).value)"
               />
+              <span v-else-if="item.model" class="static-value">{{ item.model }}</span>
             </li>
           </ul>
         </section>
       </div>
-      <p v-else class="empty">아래에서 가진 장비를 골라 주세요.</p>
+      <p v-else class="empty">{{ editable ? '아래에서 가진 장비를 골라 주세요.' : '아직 등록한 장비가 없어요.' }}</p>
 
-      <div ref="adder" class="adder">
+      <div v-if="editable" ref="adder" class="adder">
         <div class="presets">
           <button
             v-for="preset in EQUIPMENT_PRESETS"
@@ -126,6 +132,10 @@ import groupByCategory from '~/utils/groupByCategory'
 const props = defineProps<{ person: Person; initiallyOpen?: boolean }>()
 
 const gear = useGearStore()
+const group = useGroupStore()
+const { ask } = useConfirm()
+/** 내 등록이 아니면 보기만 한다. */
+const editable = computed(() => gear.canEdit(props.person.id))
 
 const categoryOptions: SelectMenuOption[] = Object.entries(EQUIPMENT_CATEGORY_LABELS).map(([value, label]) => ({ value, label }))
 
@@ -185,8 +195,11 @@ const addCustom = (): void => {
   keepAdderInView()
 }
 
-const decrease = (item: Equipment): void => {
-  if (item.quantity <= 1 && !confirm(`${equipmentLabel.equipmentLabel(item)}을(를) 목록에서 삭제할까요?`)) return
+const decrease = async (item: Equipment): Promise<void> => {
+  if (item.quantity <= 1) {
+    const ok = await ask({ title: '장비 삭제', message: `${equipmentLabel.equipmentLabel(item)}을(를) 목록에서 삭제할까요?`, confirmLabel: '삭제', danger: true })
+    if (!ok) return
+  }
   gear.setEquipmentQuantity(props.person.id, item.id, item.quantity - 1)
 }
 
@@ -195,11 +208,11 @@ const saveName = (): void => {
   editingName.value = undefined
 }
 
-const removePerson = (): void => {
+const removePerson = async (): Promise<void> => {
   const campCount = useCampStore().countCampsWithPerson(props.person.id)
   const extra = campCount ? `\n멤버로 들어간 캠핑 ${campCount}곳에서도 빠지고, 챙길 장비도 함께 빠져요.` : ''
-  if (!confirm(`${props.person.name}님과 등록된 장비를 모두 삭제할까요?${extra}`)) return
-  gear.removePerson(props.person.id)
+  const ok = await ask({ title: '멤버 삭제', message: `${props.person.name}님과 등록된 장비를 모두 삭제할까요?${extra}`, confirmLabel: '삭제', danger: true })
+  if (ok) gear.removePerson(props.person.id)
 }
 
 // 다른 사람을 새로 추가하면 앞사람 카드는 접는다.
@@ -236,6 +249,9 @@ watch(
 }
 
 .name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   overflow: hidden;
   font-size: 18px;
   text-overflow: ellipsis;
@@ -261,14 +277,6 @@ watch(
   &.open {
     transform: translateY(3px) rotate(-135deg);
   }
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
 }
 
 .details {
@@ -396,6 +404,11 @@ watch(
 
 .chip {
   background: var(--color-surface-muted);
+}
+
+.static-value {
+  color: var(--color-text-muted);
+  font-size: 14px;
 }
 
 .gear-name {

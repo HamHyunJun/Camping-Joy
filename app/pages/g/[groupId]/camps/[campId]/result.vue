@@ -14,7 +14,7 @@
           <h2 class="camp-name">{{ camp.name || '이름 없는 캠핑' }}</h2>
           <p class="camp-date">{{ format.formatDate(camp.date) }}</p>
         </div>
-        <NuxtLink class="btn btn-text" :to="`/camps/${route.params.campId}/info`">수정</NuxtLink>
+        <NuxtLink class="btn btn-text" :to="group.path(`/camps/${route.params.campId}/info`)">수정</NuxtLink>
       </div>
       <div v-if="camp.place" class="place">
         <strong>{{ camp.place.name || '캠핑장' }}</strong>
@@ -37,7 +37,7 @@
     <section v-if="schedule.length" class="block">
       <div class="block-head">
         <h2>일정</h2>
-        <NuxtLink class="btn btn-text" :to="`/camps/${route.params.campId}/schedule`">수정</NuxtLink>
+        <NuxtLink class="btn btn-text" :to="group.path(`/camps/${route.params.campId}/schedule`)">수정</NuxtLink>
       </div>
       <div class="card schedule">
         <div v-for="group in scheduleByDay" :key="group.day" class="schedule-day">
@@ -56,7 +56,7 @@
     <section class="block">
       <div class="block-head">
         <h2>멤버</h2>
-        <NuxtLink class="btn btn-text" :to="`/camps/${route.params.campId}/members`">수정</NuxtLink>
+        <NuxtLink class="btn btn-text" :to="group.path(`/camps/${route.params.campId}/members`)">수정</NuxtLink>
       </div>
       <ul class="member-chips">
         <li v-for="member in members" :key="member.id" class="chip">
@@ -69,7 +69,7 @@
     <section class="block">
       <div class="block-head">
         <h2>장비</h2>
-        <NuxtLink class="btn btn-text" :to="`/camps/${route.params.campId}/distribute`">배분 수정</NuxtLink>
+        <NuxtLink class="btn btn-text" :to="group.path(`/camps/${route.params.campId}/distribute`)">배분 수정</NuxtLink>
       </div>
 
       <p v-if="!rows.length" class="empty">아직 배분한 장비가 없어요.</p>
@@ -95,8 +95,8 @@
     </section>
 
     <div class="page-actions">
-      <NuxtLink class="btn" :to="`/camps/${route.params.campId}/meals`">이전</NuxtLink>
-      <NuxtLink class="btn btn-primary" to="/">전체 캠핑으로</NuxtLink>
+      <NuxtLink class="btn" :to="group.path(`/camps/${route.params.campId}/meals`)">이전</NuxtLink>
+      <NuxtLink class="btn btn-primary" :to="group.path()">전체 캠핑으로</NuxtLink>
     </div>
 
     <ShareSheet v-if="sharing" :camp="camp" @close="sharing = false" />
@@ -108,6 +108,8 @@ import type { Equipment, ID, Member } from '~/types/camp'
 import equipmentLabel from '~/utils/equipmentLabel'
 import format from '~/utils/format'
 import groupByCategory from '~/utils/groupByCategory'
+
+const group = useGroupStore()
 
 const store = useCampStore()
 const gear = useGearStore()

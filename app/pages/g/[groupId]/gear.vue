@@ -5,11 +5,18 @@
         <h1 class="page-title">멤버·장비 등록</h1>
         <p class="hero-desc">자주 함께 가는 사람과 각자 가진 장비를 한 번만 등록해 두면, 캠핑을 만들 때 불러올 수 있어요.</p>
       </div>
-      <button v-if="!adding && gear.people.length" class="btn btn-primary" type="button" @click="openAdd">+ 멤버 추가</button>
+      <button v-if="!adding && gear.people.length" class="btn btn-primary" type="button" :disabled="!gear.canAddPerson" @click="openAdd">+ 멤버 추가</button>
     </div>
+    <p v-if="!gear.canAddPerson" class="limit-note" role="status">
+      내 계정으로 이미 등록했어요. 일반 멤버는 본인 한 명만 등록하고 내 장비만 고칠 수 있어요. 다른 멤버 등록과 삭제는 관리자·운영진이 해요.
+    </p>
 
-    <form v-if="adding" class="card add-form" @submit.prevent="addPerson(newName)">
-      <label class="add-label" for="new-person">새 멤버 이름</label>
+    <form v-if="adding" class="card add-form" @submit.prevent="addPerson(newName, linkMe())">
+      <label class="add-label" for="new-person">{{ linkMe() && auth.enabled ? '내 이름' : '새 멤버 이름' }}</label>
+      <label v-if="canChooseMe" class="link-me">
+        <input v-model="forMe" type="checkbox" />
+        내 계정의 멤버로 등록
+      </label>
       <div class="add-row">
         <input
           id="new-person"
@@ -56,12 +63,12 @@
       </div>
       <div v-else class="empty no-result">
         <span>'{{ keyword }}' 이름의 멤버가 없어요.</span>
-        <button class="btn" type="button" @click="addPerson(keyword)">+ '{{ keyword.slice(0, 20) }}' 멤버로 추가</button>
+        <button v-if="!auth.enabled || group.isStaff" class="btn" type="button" @click="addPerson(keyword, false)">+ '{{ keyword.slice(0, 20) }}' 멤버로 추가</button>
       </div>
     </template>
     <div v-else-if="!adding" class="empty no-result">
       <span>아직 등록된 멤버가 없어요.</span>
-      <button class="btn btn-primary" type="button" @click="openAdd">+ 첫 멤버 추가</button>
+      <button class="btn btn-primary" type="button" :disabled="!gear.canAddPerson" @click="openAdd">+ 첫 멤버 추가</button>
     </div>
   </section>
 </template>
@@ -70,10 +77,14 @@
 import searchIcon from '~/assets/icons/search.svg'
 
 const gear = useGearStore()
+const auth = useAuthStore()
+const group = useGroupStore()
 
 const query = ref('')
 const adding = ref(false)
 const newName = ref('')
+/** 관리자·운영진이 새 멤버를 내 계정의 멤버로 등록할지 */
+const forMe = ref(true)
 const error = ref('')
 const lastAddedId = ref<string>()
 const nameInput = ref<HTMLInputElement>()
@@ -83,9 +94,17 @@ const filteredPeople = computed(() =>
   keyword.value ? gear.people.filter((p) => p.name.includes(keyword.value)) : gear.people,
 )
 
+/** 관리자·운영진은 아직 내 멤버가 없을 때만 내 계정으로 등록할지 고른다. */
+const canChooseMe = computed(() => auth.enabled && group.isStaff && !gear.myPerson)
+
+/** 지금 추가하는 멤버를 내 계정과 연결하는지. 일반 멤버는 항상 본인으로 등록한다. */
+const linkMe = (): boolean => (group.isStaff ? canChooseMe.value && forMe.value : true)
+
 const openAdd = async (): Promise<void> => {
   adding.value = true
   error.value = ''
+  // 로그인 중에는 프로필 닉네임을 내 이름 후보로 채운다.
+  if (auth.enabled && linkMe() && !newName.value) newName.value = (auth.profile?.nickname ?? '').slice(0, 20)
   await nextTick()
   nameInput.value?.focus()
 }
@@ -96,14 +115,14 @@ const closeAdd = (): void => {
   error.value = ''
 }
 
-const addPerson = (name: string): void => {
+const addPerson = (name: string, linkToMe: boolean): void => {
   const trimmed = name.trim()
   if (!trimmed) return
   if (gear.findPersonByName(trimmed)) {
     error.value = '이미 등록된 이름이에요.'
     return
   }
-  lastAddedId.value = gear.addPerson(trimmed)?.id
+  lastAddedId.value = gear.addPerson(trimmed, linkToMe)?.id
   query.value = ''
   closeAdd()
 }
@@ -124,6 +143,20 @@ const addPerson = (name: string): void => {
   .btn {
     flex: none;
   }
+}
+
+.link-me {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: 14px;
+}
+
+.limit-note {
+  margin: calc(var(--space-2) * -1) 0 var(--space-4);
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 
 .hero-desc {

@@ -80,8 +80,8 @@
     <p v-else class="empty">{{ currentDay }}일차 일정이 아직 없어요. 위에서 시간과 할 일을 넣어 보세요.</p>
 
     <div class="page-actions">
-      <NuxtLink class="btn" :to="`/camps/${route.params.campId}/distribute`">이전</NuxtLink>
-      <NuxtLink class="btn btn-primary" :to="`/camps/${route.params.campId}/meals`">다음: 음식 정하기</NuxtLink>
+      <NuxtLink class="btn" :to="group.path(`/camps/${route.params.campId}/distribute`)">이전</NuxtLink>
+      <NuxtLink class="btn btn-primary" :to="group.path(`/camps/${route.params.campId}/meals`)">다음: 음식 정하기</NuxtLink>
     </div>
   </section>
 </template>
@@ -90,7 +90,10 @@
 import type { SelectMenuOption } from '~/components/SelectMenu.vue'
 import format from '~/utils/format'
 
+const group = useGroupStore()
+
 const store = useCampStore()
+const { ask } = useConfirm()
 const route = useRoute()
 
 const SCHEDULE_PRESETS = ['집합', '출발', '입실', '텐트 치기', '점심', '저녁', '불멍', '취침', '아침', '정리', '퇴실']
@@ -137,10 +140,10 @@ const addDay = (): void => {
   currentDay.value = addedDays.value
 }
 
-const removeDay = (): void => {
+const removeDay = async (): Promise<void> => {
   const day = currentDay.value
   const count = dayItems.value.length
-  if (count && !confirm(`${day}일차 일정 ${count}개를 모두 지울까요?`)) return
+  if (count && !(await ask({ title: '일정 지우기', message: `${day}일차 일정 ${count}개를 모두 지울까요?`, confirmLabel: '지우기', danger: true }))) return
   store.removeScheduleDay(day)
   addedDays.value = Math.max(1, addedDays.value - 1)
   currentDay.value = Math.max(1, day - 1)

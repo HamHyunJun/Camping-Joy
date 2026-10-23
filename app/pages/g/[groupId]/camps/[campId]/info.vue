@@ -63,6 +63,8 @@
 import type { CampPlace } from '~/types/camp'
 import naverMaps from '~/composables/useNaverMaps'
 
+const group = useGroupStore()
+
 const store = useCampStore()
 const route = useRoute()
 
@@ -82,7 +84,7 @@ const save = (): void => {
   submitted.value = true
   if (nameError.value || dateError.value) return
   store.updateCampInfo({ name: form.name, place: form.place, date: form.date })
-  navigateTo(`/camps/${route.params.campId}/members`)
+  navigateTo(group.path(`/camps/${route.params.campId}/members`))
 }
 </script>
 

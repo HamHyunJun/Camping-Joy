@@ -1,372 +1,344 @@
 <template>
-  <section>
-    <div class="hero">
-      <div>
-        <h1 class="page-title">전체 캠핑</h1>
-        <p class="hero-desc">모임의 캠핑을 함께 보고, 누가 무엇을 챙길지 정리해요.</p>
+  <section class="groups">
+    <h1 class="page-title">모임</h1>
+    <p class="page-desc">함께 캠핑 가는 모임을 골라 들어가요. 처음이라면 모임을 찾아 가입을 신청해 주세요.</p>
+
+    <div class="search">
+      <img :src="searchIcon" alt="" width="20" height="20" />
+      <input v-model="query" class="input search-input" type="search" placeholder="모임 이름으로 찾기" aria-label="모임 검색" autocomplete="off" />
+      <button v-if="query" class="clear" type="button" aria-label="검색어 지우기" @click="query = ''">×</button>
+    </div>
+
+    <SelectMenu v-model="regionFilter" class="region-filter" :options="filterOptions" aria-label="지역으로 찾기" />
+
+    <ul v-if="items.length" class="group-list">
+      <li v-for="item in items" :key="item.id" class="card group-item">
+        <NuxtLink v-if="isMember(item.id)" :to="`/g/${item.id}`" class="group-link">
+          <span class="group-info">
+            <span class="group-name">
+              <strong>{{ item.name }}</strong>
+              <RoleBadge :role="group.roleIn(item.id)" />
+              <span class="count">{{ group.counts[item.id] ?? 0 }}명</span>
+            </span>
+            <span class="meta">{{ item.region }}<template v-if="item.description"> · {{ item.description }}</template></span>
+          </span>
+          <span class="chevron" aria-hidden="true">›</span>
+        </NuxtLink>
+        <div v-else class="group-link static">
+          <span class="group-info">
+            <span class="group-name">
+              <strong>{{ item.name }}</strong>
+              <span class="count">{{ group.counts[item.id] ?? 0 }}명</span>
+            </span>
+            <span class="meta">{{ item.region }}<template v-if="item.description"> · {{ item.description }}</template></span>
+          </span>
+          <span v-if="group.roleIn(item.id) === 'pending'" class="pending">
+            승인 대기 중
+            <button class="cancel" type="button" :disabled="busyId === item.id" aria-label="가입 신청 취소" title="가입 신청 취소" @click="cancel(item.id)">×</button>
+          </span>
+          <button v-else class="btn" type="button" :disabled="busyId === item.id" @click="join(item.id)">가입 신청</button>
+        </div>
+      </li>
+    </ul>
+    <p v-else class="empty">{{ keyword || regionFilter ? '조건에 맞는 모임이 없어요.' : '아직 만들어진 모임이 없어요.' }}</p>
+    <p v-if="error" class="field-error" role="alert">{{ error }}</p>
+
+    <button class="btn btn-primary create-open" type="button" @click="openCreate">＋ 새 모임 만들기</button>
+
+    <ConfirmModal
+      :open="creating"
+      title="새 모임 만들기"
+      confirm-label="만들기"
+      :confirm-disabled="!newName.trim() || taken || busy"
+      :alert="false"
+      @confirm="create"
+      @cancel="creating = false"
+    >
+      <div class="create-fields">
+        <p class="create-desc">만든 사람이 관리자가 되고, 운영진을 지정하고 가입 신청을 승인할 수 있어요.</p>
+        <div class="field">
+          <label for="new-group">모임 이름</label>
+          <input id="new-group" v-model="newName" class="input" type="text" maxlength="30" placeholder="예: 주말 캠핑 클럽" autocomplete="off" autofocus />
+          <span v-if="taken" class="field-error" role="alert">{{ TAKEN }}</span>
+        </div>
+        <div class="field">
+          <label for="new-group-desc">설명 <small>(선택)</small></label>
+          <textarea id="new-group-desc" v-model="newDescription" class="input textarea" maxlength="100" rows="3" placeholder="어떤 모임인지 알려 주세요." />
+        </div>
+        <div class="field">
+          <label for="new-group-region">지역</label>
+          <select id="new-group-region" v-model="newRegion" class="input">
+            <option v-for="option in regionOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+          </select>
+        </div>
+        <p v-if="createError" class="field-error" role="alert">{{ createError }}</p>
       </div>
-      <button v-if="camps.length" class="btn btn-primary" type="button" @click="startNewCamp">+ 새 캠핑</button>
-    </div>
-
-    <NuxtLink to="/gear" class="card gear-link">
-      <span class="avatar gear-icon"><img :src="tentIcon" alt="" width="20" height="20" /></span>
-      <span class="gear-text">
-        <strong>멤버·장비 등록</strong>
-        <span class="meta">
-          {{
-            gear.people.length
-              ? `${gear.people.length}명 · 장비 ${gearCount}종 등록됨`
-              : '캠핑 전에 사람별 장비를 먼저 등록해 두세요'
-          }}
-        </span>
-      </span>
-      <span class="chevron" aria-hidden="true">›</span>
-    </NuxtLink>
-
-    <!-- 나는 누구? (이 기기에만 기억) -->
-    <div v-if="gear.people.length" ref="mePicker" class="me-picker" @keydown.esc="choosingMe = false">
-      <button
-        type="button"
-        class="card me-trigger"
-        :class="{ open: choosingMe }"
-        aria-haspopup="listbox"
-        :aria-expanded="choosingMe"
-        @click="choosingMe = !choosingMe"
-      >
-        <span class="avatar" :class="{ unknown: !me }">{{ me ? me.name.slice(0, 1) : '?' }}</span>
-        <span class="me-text">
-          <strong>{{ me ? `나는 ${me.name}` : '내 이름 고르기' }}</strong>
-          <small>{{ me ? '내가 참여한 캠핑을 따로 모아 보여 줘요' : '고르면 내 캠핑을 따로 모아 볼 수 있어요' }}</small>
-        </span>
-        <span class="chevron down" :class="{ open: choosingMe }" aria-hidden="true">›</span>
-      </button>
-      <ul v-if="choosingMe" class="me-options" role="listbox" aria-label="내 이름">
-        <li v-for="person in gear.people" :key="person.id">
-          <button
-            type="button"
-            role="option"
-            class="me-option"
-            :class="{ selected: person.id === store.meId }"
-            :aria-selected="person.id === store.meId"
-            @click="chooseMe(person.id)"
-          >
-            <span class="avatar small">{{ person.name.slice(0, 1) }}</span>
-            <span class="option-name">{{ person.name }}</span>
-            <span v-if="person.id === store.meId" class="check" aria-hidden="true">✓</span>
-          </button>
-        </li>
-        <li v-if="me" class="clear-row">
-          <button type="button" class="me-option clear" @click="chooseMe()">선택 안 함</button>
-        </li>
-      </ul>
-    </div>
-
-    <template v-if="camps.length">
-      <section v-for="section in sections" :key="section.key" class="camp-section">
-        <h2 class="section-title list-title">{{ section.title }}</h2>
-        <p v-if="!section.items.length" class="empty">{{ section.empty }}</p>
-        <ul v-else class="camp-list">
-          <CampListItem v-for="camp in section.items" :key="camp.id" :camp="camp" />
-        </ul>
-      </section>
-    </template>
-    <div v-else class="empty empty-camps">
-      <img :src="tentIcon" alt="" width="40" height="40" />
-      <strong>{{ store.pastCamps.length ? '다가올 캠핑이 없어요' : '아직 캠핑이 없어요' }}</strong>
-      <span>새 캠핑을 만들어 준비를 시작해 보세요.</span>
-      <button class="btn btn-primary" type="button" @click="startNewCamp">+ 새 캠핑 만들기</button>
-    </div>
-
-    <NuxtLink v-if="store.pastCamps.length" to="/camps/past" class="card past-link">
-      <span class="past-text">
-        <strong>지난 캠핑</strong>
-        <span class="meta">다녀온 캠핑 {{ store.pastCamps.length }}개</span>
-      </span>
-      <span class="chevron" aria-hidden="true">›</span>
-    </NuxtLink>
+    </ConfirmModal>
   </section>
 </template>
 
 <script setup lang="ts">
-import tentIcon from '~/assets/icons/tent.svg'
+import searchIcon from '~/assets/icons/search.svg'
+import { ALL_REGIONS, REGIONS } from '~/constants/regions'
+import { TAKEN } from '~/stores/group'
 
-const store = useCampStore()
-const gear = useGearStore()
+const group = useGroupStore()
 
-// 정보를 입력하지 않고 나온 빈 캠핑은 목록에 남기지 않는다.
-store.removeEmptyDrafts()
+const query = ref('')
+const newName = ref('')
+const newDescription = ref('')
+const newRegion = ref<string>(ALL_REGIONS)
+const creating = ref(false)
+const createError = ref('')
+const regionFilter = ref('')
+const error = ref('')
+const busy = ref(false)
+const busyId = ref('')
 
-const choosingMe = ref(false)
-const mePicker = ref<HTMLElement>()
+const regionOptions = [ALL_REGIONS, ...REGIONS].map((value) => ({ value, label: value }))
+const filterOptions = [{ value: '', label: '모든 지역' }, ...regionOptions]
+const taken = computed(() => group.nameTaken(newName.value))
+const keyword = computed(() => query.value.trim())
+/** 내가 속한 모임을 먼저 보여 준다. */
+const items = computed(() =>
+  group.groups
+    .filter((g) => !keyword.value || g.name.includes(keyword.value))
+    .filter((g) => !regionFilter.value || g.region === regionFilter.value)
+    .sort((a, b) => Number(isMember(b.id)) - Number(isMember(a.id))),
+)
 
-onMounted(() => document.addEventListener('pointerdown', closeOnOutside))
-onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside))
-
-const gearCount = computed(() => gear.people.reduce((sum, p) => sum + p.equipments.length, 0))
-
-// 지난 캠핑은 '지난 캠핑' 페이지에서 따로 본다.
-const camps = computed(() => store.upcomingCamps)
-
-// 이 기기를 쓰는 사람. 고르면 그 사람이 멤버인 캠핑을 따로 모아 보여 준다.
-const me = computed(() => (store.meId ? gear.findPerson(store.meId) : undefined))
-const myCamps = computed(() => (me.value ? camps.value.filter((camp) => camp.members.some((m) => m.id === me.value?.id)) : []))
-// 내 캠핑을 골랐으면 아래 목록에서는 빼서 같은 캠핑이 두 번 보이지 않게 한다.
-const otherCamps = computed(() => camps.value.filter((camp) => !myCamps.value.includes(camp)))
-const sections = computed(() => {
-  if (!me.value) return [{ key: 'all', title: `다가올 캠핑 ${camps.value.length}개`, items: camps.value, empty: '' }]
-  return [
-    { key: 'mine', title: `내가 참여한 캠핑 ${myCamps.value.length}개`, items: myCamps.value, empty: '아직 참여한 캠핑이 없어요.' },
-    ...(otherCamps.value.length ? [{ key: 'others', title: `다른 캠핑 ${otherCamps.value.length}개`, items: otherCamps.value, empty: '' }] : []),
-  ]
-})
-
-const chooseMe = (personId?: string): void => {
-  store.meId = personId
-  choosingMe.value = false
+const isMember = (groupId: string): boolean => {
+  const role = group.roleIn(groupId)
+  return Boolean(role) && role !== 'pending'
 }
 
-// 이름 목록 밖을 누르면 닫는다.
-const closeOnOutside = (event: PointerEvent): void => {
-  if (choosingMe.value && !mePicker.value?.contains(event.target as Node)) choosingMe.value = false
+const join = async (groupId: string): Promise<void> => {
+  busyId.value = groupId
+  error.value = (await group.requestJoin(groupId)) ?? ''
+  busyId.value = ''
 }
 
-const startNewCamp = (): void => {
-  const campId = store.createCamp()
-  navigateTo(`/camps/${campId}/info`)
+const cancel = async (groupId: string): Promise<void> => {
+  busyId.value = groupId
+  error.value = (await group.cancelJoin(groupId)) ?? ''
+  busyId.value = ''
 }
+
+const openCreate = (): void => {
+  newName.value = ''
+  newDescription.value = ''
+  newRegion.value = ALL_REGIONS
+  createError.value = ''
+  creating.value = true
+}
+
+const create = async (): Promise<void> => {
+  busy.value = true
+  createError.value = ''
+  const result = await group.createGroup({ name: newName.value, description: newDescription.value, region: newRegion.value })
+  busy.value = false
+  if (result.error) createError.value = result.error
+  else if (result.id) {
+    creating.value = false
+    await navigateTo(`/g/${result.id}`)
+  }
+}
+
+// 승인된 가입이나 새 모임이 바로 보이도록 들어올 때마다 다시 읽는다.
+onMounted(() => group.loadGroups())
 </script>
 
 <style scoped lang="scss">
-.hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-
-  .page-title {
-    margin-bottom: 0;
-  }
+.groups {
+  max-width: 560px;
+  margin: 0 auto;
 }
 
-.hero-desc {
-  margin: var(--space-1) 0 0;
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-.gear-link {
+.search {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-6);
-  text-decoration: none;
+  margin-bottom: var(--space-4);
 
-  &:hover {
-    border-color: var(--color-primary);
+  img {
+    position: absolute;
+    left: var(--space-3);
+    pointer-events: none;
   }
 }
 
-.gear-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+.search-input {
+  padding-left: 42px;
+  padding-right: 40px;
+  border-radius: 999px;
+
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
 }
 
-.gear-text {
+.clear {
+  position: absolute;
+  right: var(--space-2);
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.group-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.group-item {
+  padding: 0;
+}
+
+.group-link {
   display: flex;
-  flex: 1;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 60px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 160ms ease;
+
+  &:not(.static):hover {
+    background: var(--color-surface-muted);
+  }
+
+  &:not(.static):active {
+    transform: scale(0.98);
+  }
+}
+
+.group-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   min-width: 0;
+
+  strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .chevron {
   color: var(--color-text-subtle);
-  font-size: 24px;
+  font-size: 22px;
 }
 
-.me-picker {
-  position: relative;
-  z-index: 5;
-  margin-bottom: var(--space-6);
-}
-
-.me-trigger {
+.pending {
   display: flex;
+  flex: none;
   align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
 
-  &:hover,
-  &.open {
-    border-color: var(--color-primary);
+.cancel {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  &:hover:not(:disabled) {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
   }
 
-  .avatar.unknown {
-    background: var(--color-surface-muted);
-    color: var(--color-text-subtle);
+  &:active:not(:disabled) {
+    transform: scale(0.9);
   }
 }
 
-.me-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
+.region-filter {
+  margin-bottom: var(--space-4);
+}
 
-  strong {
-    font-size: 16px;
+.group-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.count {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.meta {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.create-open {
+  width: 100%;
+}
+
+.create-fields {
+  display: grid;
+  gap: var(--space-3);
+  white-space: normal;
+}
+
+.create-desc {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.field {
+  margin-bottom: 0;
+
+  label {
+    font-size: 14px;
+    font-weight: 600;
   }
 
   small {
     color: var(--color-text-muted);
-    font-size: 13px;
+    font-weight: 400;
   }
 }
 
-.chevron.down {
-  line-height: 1;
-  transform: rotate(90deg);
-  transition: transform 0.15s;
-
-  &.open {
-    transform: rotate(-90deg);
-  }
-}
-
-.me-options {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  left: 0;
-  max-height: 300px;
-  margin: 0;
-  padding: var(--space-1);
-  overflow-y: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-md);
-  list-style: none;
-}
-
-.me-option {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  min-height: 48px;
-  padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--color-surface-muted);
-  }
-
-  &.selected {
-    background: var(--color-primary-soft);
-    color: var(--color-primary);
-    font-weight: 700;
-  }
-
-  &.clear {
-    justify-content: center;
-    color: var(--color-text-muted);
-    font-size: 14px;
-  }
-}
-
-.avatar.small {
-  width: 32px;
-  height: 32px;
-  font-size: 14px;
-}
-
-.option-name {
-  flex: 1;
-}
-
-.check {
-  font-weight: 700;
-}
-
-.clear-row {
-  margin-top: var(--space-1);
-  border-top: 1px solid var(--color-border);
-  padding-top: var(--space-1);
-}
-
-.camp-section + .camp-section {
-  margin-top: var(--space-8);
-}
-
-.list-title {
-  margin-bottom: var(--space-3);
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-.camp-list {
-  display: grid;
-  // 칸이 긴 캠핑 이름만큼 넓어져 화면 밖으로 나가지 않게 한다.
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  @include pc {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.meta {
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-.past-link {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-8);
-  text-decoration: none;
-
-  &:hover {
-    border-color: var(--color-primary);
-  }
-}
-
-.past-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-}
-
-.empty-camps {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  background: var(--color-surface);
-
-  strong {
-    color: var(--color-text);
-    font-size: 16px;
-  }
-
-  .btn {
-    margin-top: var(--space-2);
-  }
+.textarea {
+  min-height: 80px;
+  padding: var(--space-3);
+  resize: vertical;
 }
 </style>

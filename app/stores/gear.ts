@@ -4,8 +4,6 @@ import idUtil from '~/utils/id'
 
 interface GearState {
   people: Person[]
-  /** 이 기기에 있던 등록 목록을 서버에 한 번 올렸는지 (처음 연결할 때만 올린다) */
-  syncedOnce: boolean
 }
 
 export interface EquipmentInput {
@@ -20,28 +18,45 @@ export interface EquipmentInput {
 export const useGearStore = defineStore('gear', {
   state: (): GearState => ({
     people: [],
-    syncedOnce: false,
   }),
   getters: {
     findPerson: (state) => (personId: ID): Person | undefined =>
       state.people.find((p) => p.id === personId),
     findPersonByName: (state) => (name: string): Person | undefined =>
       state.people.find((p) => p.name === name.trim()),
+    /** 로그인한 계정으로 등록한 본인 */
+    myPerson: (state): Person | undefined => {
+      const userId = useAuthStore().user?.id
+      return userId ? state.people.find((p) => p.userId === userId) : undefined
+    },
+    /** 멤버를 새로 등록할 수 있는지. 관리자·운영진은 계속 등록하고, 일반 멤버는 본인 한 명만 등록한다. 서버 설정이 없으면(기기에만 저장) 제한이 없다. */
+    canAddPerson(): boolean {
+      return !useAuthStore().enabled || useGroupStore().isStaff || !this.myPerson
+    },
+    /** 관리자·운영진은 누구든, 일반 멤버는 본인 등록만 고칠 수 있다. */
+    canEdit() {
+      return (personId: ID): boolean => !useAuthStore().enabled || useGroupStore().isStaff || this.myPerson?.id === personId
+    },
+    /** 멤버 삭제는 관리자·운영진만 할 수 있다. */
+    canRemovePerson: (): boolean => !useAuthStore().enabled || useGroupStore().isStaff,
   },
   actions: {
-    addPerson(name: string): Person | undefined {
+    /** forMe가 true면 내 계정과 연결한 본인으로 등록한다. 일반 멤버는 본인만 등록할 수 있다. */
+    addPerson(name: string, forMe = true): Person | undefined {
       const trimmed = name.trim()
-      if (!trimmed) return undefined
+      if (!trimmed || !this.canAddPerson) return undefined
+      if (useAuthStore().enabled && (forMe ? this.myPerson : !useGroupStore().isStaff)) return undefined
       const existing = this.findPersonByName(trimmed)
       if (existing) return existing
-      const person: Person = { id: idUtil.createId(), name: trimmed, equipments: [] }
+      const userId = forMe ? useAuthStore().user?.id : undefined
+      const person: Person = { id: idUtil.createId(), name: trimmed, ...(userId ? { userId } : {}), equipments: [] }
       this.people.push(person)
       return person
     },
     renamePerson(personId: ID, name: string): void {
       const person = this.findPerson(personId)
       const trimmed = name.trim()
-      if (!person || !trimmed) return
+      if (!person || !trimmed || !this.canEdit(personId)) return
       person.name = trimmed
       useCampStore().syncMemberName(personId, trimmed)
     },
@@ -62,6 +77,7 @@ export const useGearStore = defineStore('gear', {
       this.people = next
     },
     removePerson(personId: ID): void {
+      if (!this.canRemovePerson) return
       this.people = this.people.filter((p) => p.id !== personId)
       useCampStore().removePersonFromCamps(personId)
     },
@@ -69,7 +85,7 @@ export const useGearStore = defineStore('gear', {
     addEquipment(personId: ID, input: EquipmentInput): Equipment | undefined {
       const person = this.findPerson(personId)
       const name = input.name.trim()
-      if (!person || !name || input.quantity < 1) return undefined
+      if (!person || !name || input.quantity < 1 || !this.canEdit(personId)) return undefined
       const model = input.model?.trim() || undefined
       // 같은 이름·카테고리·크기·모델명 장비가 이미 있으면 수량만 늘린다.
       const same = person.equipments.find(
@@ -95,7 +111,7 @@ export const useGearStore = defineStore('gear', {
     setEquipmentSize(personId: ID, equipmentId: ID, size: string): void {
       const person = this.findPerson(personId)
       const equipment = person?.equipments.find((e) => e.id === equipmentId)
-      if (!person || !equipment) return
+      if (!person || !equipment || !this.canEdit(personId)) return
       const same = person.equipments.find(
         (e) =>
           e.id !== equipmentId &&
@@ -117,7 +133,7 @@ export const useGearStore = defineStore('gear', {
     setEquipmentModel(personId: ID, equipmentId: ID, model: string): void {
       const person = this.findPerson(personId)
       const equipment = person?.equipments.find((e) => e.id === equipmentId)
-      if (!person || !equipment) return
+      if (!person || !equipment || !this.canEdit(personId)) return
       const trimmed = model.trim().slice(0, 30)
       if (trimmed) equipment.model = trimmed
       else delete equipment.model
@@ -125,7 +141,7 @@ export const useGearStore = defineStore('gear', {
     },
     setEquipmentQuantity(personId: ID, equipmentId: ID, quantity: number): void {
       const person = this.findPerson(personId)
-      if (!person) return
+      if (!person || !this.canEdit(personId)) return
       if (quantity < 1) {
         person.equipments = person.equipments.filter((e) => e.id !== equipmentId)
       } else {

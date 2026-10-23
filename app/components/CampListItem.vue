@@ -1,6 +1,6 @@
 <template>
   <li class="card camp-item">
-    <NuxtLink :to="`/camps/${camp.id}/${progress.step}`" class="camp-link">
+    <NuxtLink :to="group.path(`/camps/${camp.id}/${progress.step}`)" class="camp-link">
       <span class="date-block">
         <small>{{ dateParts(camp.date).month }}</small>
         <strong>{{ dateParts(camp.date).day }}</strong>
@@ -32,14 +32,22 @@ import format from '~/utils/format'
 
 const props = defineProps<{ camp: Camp }>()
 
+const group = useGroupStore()
+
 const store = useCampStore()
+const { ask } = useConfirm()
 
 const progress = computed(() => campSteps.campProgress(props.camp))
 const dday = computed(() => format.formatDday(props.camp.date))
 
-const removeCamp = (camp: Camp): void => {
-  if (!confirm(`'${camp.name || '이름 없는 캠핑'}'을(를) 삭제할까요?\n모든 사람의 전체 캠핑에서 지워져요.`)) return
-  store.deleteCamp(camp.id)
+const removeCamp = async (camp: Camp): Promise<void> => {
+  const ok = await ask({
+    title: '캠핑 삭제',
+    message: `'${camp.name || '이름 없는 캠핑'}'을(를) 삭제할까요?\n모든 사람의 전체 캠핑에서 지워져요.`,
+    confirmLabel: '삭제',
+    danger: true,
+  })
+  if (ok) store.deleteCamp(camp.id)
 }
 
 const dateParts = (date: string): { month: string; day: string } => {

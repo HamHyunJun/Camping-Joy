@@ -1,6 +1,6 @@
 <template>
   <section>
-    <NuxtLink to="/" class="back">‹ 전체 캠핑</NuxtLink>
+    <NuxtLink :to="group.path()" class="back-link"><span class="back-icon" aria-hidden="true" />전체 캠핑</NuxtLink>
     <h1 class="page-title">지난 캠핑</h1>
     <p class="page-desc">날짜가 지난 캠핑이에요. 최근에 다녀온 캠핑이 먼저 보여요.</p>
 
@@ -12,22 +12,12 @@
 </template>
 
 <script setup lang="ts">
+
+const group = useGroupStore()
 const store = useCampStore()
 </script>
 
 <style scoped lang="scss">
-.back {
-  display: inline-block;
-  margin-bottom: var(--space-3);
-  color: var(--color-text-muted);
-  font-size: 14px;
-  text-decoration: none;
-
-  &:hover {
-    color: var(--color-primary);
-  }
-}
-
 .camp-list {
   display: grid;
   // 칸이 긴 캠핑 이름만큼 넓어져 화면 밖으로 나가지 않게 한다.

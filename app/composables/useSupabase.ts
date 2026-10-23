@@ -11,7 +11,7 @@ export function useSupabase(): SupabaseClient<Database> | undefined {
   if (client) return client
   const { supabaseUrl, supabaseKey } = useRuntimeConfig().public
   if (!supabaseUrl || !supabaseKey) return undefined
-  // 로그인이 없으므로 세션을 저장하지 않는다.
-  client = createClient<Database>(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  // 로그인 세션은 브라우저에 저장되고, 카카오·비밀번호 재설정 링크로 돌아오면 주소의 토큰을 읽는다.
+  client = createClient<Database>(supabaseUrl, supabaseKey)
   return client
 }

@@ -74,7 +74,7 @@
       <section class="panel">
         <h2 class="panel-title">멤버들이 가진 장비</h2>
         <p v-if="!pool.length" class="hint">
-          등록된 장비가 없어요. <NuxtLink to="/gear">멤버·장비 등록</NuxtLink>에서 추가해 주세요.
+          등록된 장비가 없어요. <NuxtLink :to="group.path('/gear')">멤버·장비 등록</NuxtLink>에서 추가해 주세요.
         </p>
         <div v-for="group in poolGroups" :key="group.memberId" class="person-group">
           <h3 class="person-head">
@@ -147,8 +147,8 @@
     </div>
 
     <div class="page-actions">
-      <NuxtLink class="btn" :to="`/camps/${route.params.campId}/members`">이전</NuxtLink>
-      <NuxtLink v-if="shared.length" class="btn btn-primary" :to="`/camps/${route.params.campId}/schedule`">
+      <NuxtLink class="btn" :to="group.path(`/camps/${route.params.campId}/members`)">이전</NuxtLink>
+      <NuxtLink v-if="shared.length" class="btn btn-primary" :to="group.path(`/camps/${route.params.campId}/schedule`)">
         다음: 일정 짜기
       </NuxtLink>
       <button v-else class="btn btn-primary" type="button" disabled>다음: 일정 짜기</button>
@@ -164,7 +164,10 @@ import groupByCategory from '~/utils/groupByCategory'
 
 definePageMeta({ wide: true })
 
+const group = useGroupStore()
+
 const store = useCampStore()
+const { ask } = useConfirm()
 const gear = useGearStore()
 const route = useRoute()
 
@@ -266,9 +269,8 @@ const assignedCount = (memberId: ID): number => {
 const keepItem = (item: Equipment): Equipment => item
 const ignore = (): void => {}
 
-const reset = (): void => {
-  if (!confirm('공통으로 챙길 장비를 모두 비울까요?')) return
-  store.resetDistribution()
+const reset = async (): Promise<void> => {
+  if (await ask({ title: '배분 비우기', message: '공통으로 챙길 장비를 모두 비울까요?', confirmLabel: '비우기', danger: true })) store.resetDistribution()
 }
 </script>
 

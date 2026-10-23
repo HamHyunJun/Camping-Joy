@@ -4,12 +4,14 @@
 **Generated:** 2026-10-12 · **Updated:** 2026-10-12
 
 ## Purpose
-라우트 미들웨어. 현재는 전역 미들웨어 하나.
+라우트 미들웨어. 전역 미들웨어 셋이 파일 이름 순서(01 → 02 → 03)로 실행된다. 앞 단계가 먼저 끝나야 뒤 단계가 맞게 동작하므로 이름의 숫자를 바꾸지 말 것.
 
 ## Key Files
 | File | Description |
 |------|-------------|
-| `camp.global.ts` | `campId` 파라미터가 있으면 `store.selectCamp(campId)`. 없는 캠핑이면 `/`로, 앞 단계가 미완료면 `lastVisitableStep()`으로 리다이렉트 |
+| `01.auth.global.ts` | 로그인하지 않았으면 `/login`, 닉네임을 정하지 않았으면 `/profile`로 보낸다. 서버 설정이 없으면 로그인을 요구하지 않는다 |
+| `02.group.global.ts` | `/g/[groupId]/...`로 들어오면 소속을 확인(아니면 `/`)하고 현재 모임으로 정한 뒤, 그 모임의 멤버·장비·캠핑을 `$gearSync`·`$campSync`의 `connect()`로 불러온다 |
+| `03.camp.global.ts` | `campId` 파라미터가 있으면 `store.selectCamp(campId)`. 없는 캠핑이면 `/`로, 앞 단계가 미완료면 `lastVisitableStep()`으로 리다이렉트 |
 
 ## For AI Agents
 

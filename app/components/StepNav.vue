@@ -8,7 +8,7 @@
       >
         <NuxtLink
           v-if="canVisit(step.path)"
-          :to="`/camps/${props.campId}/${step.path}`"
+          :to="group.path(`/camps/${props.campId}/${step.path}`)"
           class="step"
           :aria-current="index === currentIndex ? 'step' : undefined"
         >
@@ -29,6 +29,8 @@ import { CAMP_STEPS, type CampStep } from '~/constants/steps'
 import campSteps from '~/utils/campSteps'
 
 const props = defineProps<{ campId: string }>()
+
+const group = useGroupStore()
 
 const route = useRoute()
 const store = useCampStore()

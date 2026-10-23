@@ -30,6 +30,8 @@ export interface Equipment {
 export interface Person {
   id: ID
   name: string
+  /** 이 사람으로 등록한 계정(auth.users.id). 계정 없이 등록한 예전 멤버에는 없다. */
+  userId?: ID
   equipments: Equipment[]
 }
 

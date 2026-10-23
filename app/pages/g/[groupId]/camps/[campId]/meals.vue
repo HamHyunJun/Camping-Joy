@@ -61,8 +61,8 @@
     </section>
 
     <div class="page-actions">
-      <NuxtLink class="btn" :to="`/camps/${route.params.campId}/schedule`">이전</NuxtLink>
-      <NuxtLink class="btn btn-primary" :to="`/camps/${route.params.campId}/result`">다음: 결과 보기</NuxtLink>
+      <NuxtLink class="btn" :to="group.path(`/camps/${route.params.campId}/schedule`)">이전</NuxtLink>
+      <NuxtLink class="btn btn-primary" :to="group.path(`/camps/${route.params.campId}/result`)">다음: 결과 보기</NuxtLink>
     </div>
   </section>
 </template>
@@ -71,6 +71,8 @@
 import type { SelectMenuOption } from '~/components/SelectMenu.vue'
 import { MEAL_TYPES } from '~/constants/meals'
 import format from '~/utils/format'
+
+const group = useGroupStore()
 
 const store = useCampStore()
 const route = useRoute()

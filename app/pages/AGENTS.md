@@ -6,6 +6,9 @@
 ## Purpose
 Nuxt 파일 기반 라우트. 홈(캠핑 목록), 멤버·장비 등록, 지난 캠핑, 그리고 캠핑 하나를 만드는 5단계 화면(`camps/[campId]/`)이 있다.
 
+## 주소 구조
+`/`(모임 목록·검색·만들기) → `/g/[groupId]`(모임의 캠핑 목록) · `/g/[groupId]/gear` · `/g/[groupId]/manage`(관리자·운영진) → `/g/[groupId]/camps/[campId]/<단계>`. 모임 안의 링크는 `useGroupStore().path('/gear')`처럼 만든다. 아래 표의 Route는 `/g/[groupId]` 뒤에 붙는 부분이다.
+
 ## Key Files
 | File | Route | Description |
 |------|-------|-------------|

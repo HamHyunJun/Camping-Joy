@@ -6,7 +6,7 @@
     </div>
     <p class="page-desc">멤버·장비 등록에 있는 사람 중 함께 가는 사람을 골라 주세요.</p>
     <p v-if="!gear.people.length" class="notice">
-      아직 등록된 사람이 없어요. <NuxtLink to="/gear">멤버·장비 등록</NuxtLink>에서 먼저 추가해 주세요.
+      아직 등록된 사람이 없어요. <NuxtLink :to="group.path('/gear')">멤버·장비 등록</NuxtLink>에서 먼저 추가해 주세요.
     </p>
 
     <form class="add-form" @submit.prevent="addByName">
@@ -26,7 +26,7 @@
       <button class="btn btn-primary" type="submit" :disabled="!newName.trim()">추가</button>
     </form>
     <p v-if="addError" class="field-error">
-      {{ addError }} <NuxtLink v-if="addError.startsWith('등록되지')" to="/gear">등록하러 가기</NuxtLink>
+      {{ addError }} <NuxtLink v-if="addError.startsWith('등록되지')" :to="group.path('/gear')">등록하러 가기</NuxtLink>
     </p>
 
     <div v-if="candidates.length" class="candidates">
@@ -61,8 +61,8 @@
     <p v-else class="empty">아직 멤버가 없어요.</p>
 
     <div class="page-actions">
-      <NuxtLink class="btn" :to="`/camps/${route.params.campId}/info`">이전</NuxtLink>
-      <NuxtLink v-if="members.length" class="btn btn-primary" :to="`/camps/${route.params.campId}/distribute`">
+      <NuxtLink class="btn" :to="group.path(`/camps/${route.params.campId}/info`)">이전</NuxtLink>
+      <NuxtLink v-if="members.length" class="btn btn-primary" :to="group.path(`/camps/${route.params.campId}/distribute`)">
         다음: 장비 배분
       </NuxtLink>
       <button v-else class="btn btn-primary" type="button" disabled>다음: 장비 배분</button>
@@ -73,7 +73,10 @@
 <script setup lang="ts">
 import type { Member, Person } from '~/types/camp'
 
+const group = useGroupStore()
+
 const store = useCampStore()
+const { ask } = useConfirm()
 const gear = useGearStore()
 const route = useRoute()
 
@@ -121,19 +124,17 @@ const addGuest = (): void => {
   addError.value = ''
 }
 
-const remove = (member: Member): void => {
+const remove = async (member: Member): Promise<void> => {
   const message = member.equipments.length
     ? `${member.name}님과 담당으로 정한 장비를 빼시겠어요?`
     : `${member.name}님을 이번 캠핑에서 빼시겠어요?`
-  if (!confirm(message)) return
-  store.removeMember(member.id)
+  if (await ask({ title: '멤버 빼기', message, confirmLabel: '빼기', danger: true })) store.removeMember(member.id)
 }
 
 const bringingCount = (member: Member): number => member.equipments.reduce((sum, e) => sum + e.quantity, 0)
 
-const reset = (): void => {
-  if (!confirm('멤버를 모두 빼고 배분도 비울까요?')) return
-  store.resetMembers()
+const reset = async (): Promise<void> => {
+  if (await ask({ title: '멤버 모두 빼기', message: '멤버를 모두 빼고 배분도 비울까요?', confirmLabel: '모두 빼기', danger: true })) store.resetMembers()
 }
 </script>
 

@@ -24,10 +24,10 @@ export const useGearStore = defineStore('gear', {
       state.people.find((p) => p.id === personId),
     findPersonByName: (state) => (name: string): Person | undefined =>
       state.people.find((p) => p.name === name.trim()),
-    /** 로그인한 계정으로 등록한 본인 */
+    /** 로그인한 계정의 본인 카드. 직접 등록했거나 다른 계정과 함께 쓰는 카드 */
     myPerson: (state): Person | undefined => {
       const userId = useAuthStore().user?.id
-      return userId ? state.people.find((p) => p.userId === userId) : undefined
+      return userId ? state.people.find((p) => p.userId === userId || p.sharedUserIds?.includes(userId)) : undefined
     },
     /** 멤버를 새로 등록할 수 있는지. 관리자·운영진은 계속 등록하고, 일반 멤버는 본인 한 명만 등록한다. 서버 설정이 없으면(기기에만 저장) 제한이 없다. */
     canAddPerson(): boolean {

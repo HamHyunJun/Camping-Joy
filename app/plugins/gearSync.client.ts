@@ -62,10 +62,15 @@ export default defineNuxtPlugin(() => {
       ? await db.from('equipments').select('*').in('person_id', persons.data.map((p) => p.id)).order('created_at').order('name')
       : { data: [], error: undefined }
     if (equipments.error) throw equipments.error
+    const accounts = await db.from('person_accounts').select('*').eq('group_id', id)
+    if (accounts.error) throw accounts.error
     return persons.data.map((p) => ({
       id: p.id,
       name: p.name,
       ...(p.user_id ? { userId: p.user_id } : {}),
+      ...(accounts.data.some((a) => a.person_id === p.id)
+        ? { sharedUserIds: accounts.data.filter((a) => a.person_id === p.id).map((a) => a.user_id) }
+        : {}),
       equipments: equipments.data
         .filter((e) => e.person_id === p.id)
         .map((e): Equipment => ({
@@ -182,6 +187,7 @@ export default defineNuxtPlugin(() => {
       .channel(`gear-${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'people', filter: `group_id=eq.${id}` }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'equipments' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'person_accounts', filter: `group_id=eq.${id}` }, scheduleRefresh)
       .subscribe()
   }
 

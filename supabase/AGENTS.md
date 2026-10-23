@@ -24,6 +24,7 @@ Supabase(Postgres) 스키마 마이그레이션. Supabase CLI 연동 설정은 �
 | `migrations/20261025100000_group_name_unique_delete.sql` | 모임 이름 유일 인덱스(`lower(name)`)와 `delete_group`(관리자만, 멤버·장비·캠핑이 cascade로 함께 삭제) |
 | `migrations/20261026100000_group_profile.sql` | `groups.description`(≤100)·`region`(전국+시도 check), `create_group(이름, 설명, 지역)`, `group_member_counts()`(가입 신청 제외 인원, 비구성원도 볼 수 있게 security definer) |
 | `migrations/20261027100000_update_group.sql` | `update_group`: 모임 설명·지역 수정(관리자만) |
+| `migrations/20261028100000_person_accounts.sql` | `person_accounts`: 멤버 카드 하나를 여러 계정이 함께 쓴다(대표 계정은 `people.user_id`, 나머지는 이 표). 앱은 읽기만 하고 연결은 관리자가 DB에서 한다. 대표 계정과 겸임·카드 둘 연결은 트리거·유일 제약이 막는다. `remove_group_member`가 이 연결도 끊는다 |
 
 ## 로컬 개발 DB
 - 개발은 운영 DB가 아니라 로컬 Supabase(Docker)를 쓴다. 운영 값은 `.env.remote`(git 제외)에 보관한다.

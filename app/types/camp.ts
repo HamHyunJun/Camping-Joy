@@ -32,6 +32,8 @@ export interface Person {
   name: string
   /** 이 사람으로 등록한 계정(auth.users.id). 계정 없이 등록한 예전 멤버에는 없다. */
   userId?: ID
+  /** 이 카드를 함께 쓰는 다른 계정(예: 장비를 같이 쓰는 커플). 관리자가 연결한다. */
+  sharedUserIds?: ID[]
   equipments: Equipment[]
 }
 

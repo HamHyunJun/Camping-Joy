@@ -31,6 +31,14 @@ export type PersonRow = {
   created_at: string
 }
 
+/** 멤버 카드를 함께 쓰는 계정. 대표 계정(PersonRow.user_id)과 별개로 관리자가 연결한다. */
+export type PersonAccountRow = {
+  person_id: string
+  user_id: string
+  group_id: string
+  created_at: string
+}
+
 export type EquipmentRow = {
   id: string
   person_id: string
@@ -82,6 +90,7 @@ export interface Database {
   public: {
     Tables: {
       people: Table<PersonRow, Omit<PersonRow, 'created_at'>>
+      person_accounts: Table<PersonAccountRow, Omit<PersonAccountRow, 'created_at'>>
       equipments: Table<EquipmentRow, Omit<EquipmentRow, 'created_at'>>
       camps: Table<CampRow, CampRow>
       groups: Table<GroupRow, Pick<GroupRow, 'name'>>

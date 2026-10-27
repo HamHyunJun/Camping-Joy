@@ -1,7 +1,7 @@
 # supabase
 
 **Parent context:** `../AGENTS.md`
-**Generated:** 2026-10-12 · **Updated:** 2026-10-12
+**Generated:** 2026-10-12 · **Updated:** 2026-10-27
 
 ## Purpose
 Supabase(Postgres) 스키마 마이그레이션. Supabase CLI 연동 설정은 없고, 대시보드 SQL Editor에서 `migrations/` 파일을 이름 순서대로 실행한다.
@@ -25,6 +25,8 @@ Supabase(Postgres) 스키마 마이그레이션. Supabase CLI 연동 설정은 �
 | `migrations/20261026100000_group_profile.sql` | `groups.description`(≤100)·`region`(전국+시도 check), `create_group(이름, 설명, 지역)`, `group_member_counts()`(가입 신청 제외 인원, 비구성원도 볼 수 있게 security definer) |
 | `migrations/20261027100000_update_group.sql` | `update_group`: 모임 설명·지역 수정(관리자만) |
 | `migrations/20261028100000_person_accounts.sql` | `person_accounts`: 멤버 카드 하나를 여러 계정이 함께 쓴다(대표 계정은 `people.user_id`, 나머지는 이 표). 앱은 읽기만 하고 연결은 관리자가 DB에서 한다. 대표 계정과 겸임·카드 둘 연결은 트리거·유일 제약이 막는다. `remove_group_member`가 이 연결도 끊는다 |
+| `migrations/20261029100000_transfer_ownership.sql` | `transfer_ownership(g, u)`: 관리자 위임. 관리자 본인만 호출하고, 나는 운영진(admin)으로 내려가고 대상이 관리자(owner)가 된다(모임당 owner는 한 명) |
+| `migrations/20261029110000_transfer_ownership_admin_only.sql` | 위임 대상을 운영진(admin)으로 제한. 일반 멤버·가입 신청자·본인에게는 위임할 수 없다 |
 
 ## 로컬 개발 DB
 - 개발은 운영 DB가 아니라 로컬 Supabase(Docker)를 쓴다. 운영 값은 `.env.remote`(git 제외)에 보관한다.
@@ -37,7 +39,8 @@ Supabase(Postgres) 스키마 마이그레이션. Supabase CLI 연동 설정은 �
 ### Working In This Directory
 - 이미 적용된 마이그레이션은 고치지 말고 새 파일(`YYYYMMDDHHMMSS_설명.sql`)을 추가한다. `add column if not exists`처럼 다시 실행해도 안전하게 쓴다.
 - 스키마를 바꾸면 `app/types/database.ts`, 동기화 플러그인(`app/plugins/*Sync.client.ts`)의 행 변환, 앱의 입력 길이 제한을 함께 맞춘다.
-- 로그인이 없어 RLS 정책은 의도적으로 `using (true) with check (true)`다(누구나 읽기·쓰기). 보안 강화는 앱 설계 변경이 필요하니 임의로 바꾸지 말고 먼저 확인한다.
+- RLS는 모임 구성원·역할(`is_group_member`·`is_group_staff`) 기준이고 anon은 막혀 있다. 모임·역할 변경은 `security definer` RPC로만 하며, 정책을 풀거나 테이블에 직접 쓰는 길을 열지 않는다. 바꿀 때는 먼저 확인한다.
+- 역할 규칙: 모임당 owner 한 명, 위임은 admin에게만, 일반 멤버는 본인 멤버 카드 한 장만 만들고 고친다.
 - 새 테이블을 실시간으로 반영하려면 `supabase_realtime` publication에 추가하는 블록을 같은 형식으로 넣는다.
 - service_role 키나 비밀값을 SQL·코드에 넣지 않는다.
 - 원격 DB에 직접 적용(MCP `apply_migration` 등)은 사용자 확인 후에만 한다.

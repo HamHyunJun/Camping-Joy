@@ -35,15 +35,15 @@ export const useCampStore = defineStore('camp', {
   getters: {
     currentCamp: (state): Camp | undefined =>
       state.camps.find((camp) => camp.id === state.currentCampId),
-    /** 오늘이나 앞으로 갈 캠핑. 가까운 날짜가 먼저 */
+    /** 오늘이나 앞으로 갈 캠핑. 가까운 날짜가 먼저. 이름을 적고 정보를 저장하기 전의 새 캠핑은 목록에 올리지 않는다. */
     upcomingCamps: (state): Camp[] =>
       state.camps
-        .filter((c) => c.date >= today())
+        .filter((c) => c.name.trim() && c.date >= today())
         .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt)),
     /** 날짜가 지난 캠핑. 최근 날짜가 먼저 */
     pastCamps: (state): Camp[] =>
       state.camps
-        .filter((c) => c.date < today())
+        .filter((c) => c.name.trim() && c.date < today())
         .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
   },
   actions: {

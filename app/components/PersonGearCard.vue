@@ -225,6 +225,8 @@ watch(
 <style scoped lang="scss">
 .person-card {
   padding: 0;
+  // 새 멤버로 스크롤할 때 sticky 헤더에 가리지 않게 여유를 둔다.
+  scroll-margin-top: calc(var(--safe-top) + 72px);
 }
 
 .toggle {

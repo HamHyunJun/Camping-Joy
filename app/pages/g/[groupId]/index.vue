@@ -26,25 +26,27 @@
         </span>
         <span class="chevron down" :class="{ open: choosingMe }" aria-hidden="true">›</span>
       </button>
-      <ul v-if="choosingMe" class="me-options" role="listbox" aria-label="내 이름">
-        <li v-for="person in gear.people" :key="person.id">
-          <button
-            type="button"
-            role="option"
-            class="me-option"
-            :class="{ selected: person.id === store.meId }"
-            :aria-selected="person.id === store.meId"
-            @click="chooseMe(person.id)"
-          >
-            <span class="avatar small">{{ person.name.slice(0, 1) }}</span>
-            <span class="option-name">{{ person.name }}</span>
-            <span v-if="person.id === store.meId" class="check" aria-hidden="true">✓</span>
-          </button>
-        </li>
-        <li v-if="me" class="clear-row">
-          <button type="button" class="me-option clear" @click="chooseMe()">선택 안 함</button>
-        </li>
-      </ul>
+      <Transition name="options">
+        <ul v-if="choosingMe" class="me-options" role="listbox" aria-label="내 이름">
+          <li v-for="person in gear.people" :key="person.id">
+            <button
+              type="button"
+              role="option"
+              class="me-option"
+              :class="{ selected: person.id === store.meId }"
+              :aria-selected="person.id === store.meId"
+              @click="chooseMe(person.id)"
+            >
+              <span class="avatar small">{{ person.name.slice(0, 1) }}</span>
+              <span class="option-name">{{ person.name }}</span>
+              <span v-if="person.id === store.meId" class="check" aria-hidden="true">✓</span>
+            </button>
+          </li>
+          <li v-if="me" class="clear-row">
+            <button type="button" class="me-option clear" @click="chooseMe()">선택 안 함</button>
+          </li>
+        </ul>
+      </Transition>
     </div>
 
     <template v-if="camps.length">
@@ -134,6 +136,16 @@ const startNewCamp = (): void => {
   .page-title {
     margin-bottom: 0;
   }
+
+  // 모바일에서는 버튼을 설명 아래 한 줄로 내려 설명이 길게 꺾이지 않게 한다.
+  @include mobile {
+    flex-direction: column;
+    align-items: stretch;
+
+    .btn {
+      width: 100%;
+    }
+  }
 }
 
 .hero-desc {
@@ -214,6 +226,28 @@ const startNewCamp = (): void => {
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
   list-style: none;
+  transform-origin: top center;
+}
+
+// 열고 닫을 때 살짝 커지며 나타나고 사라진다.
+.options-enter-active,
+.options-leave-active {
+  transition:
+    opacity 140ms ease,
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.options-enter-from,
+.options-leave-to {
+  opacity: 0;
+  transform: scale(0.96) translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .options-enter-active,
+  .options-leave-active {
+    transition: none;
+  }
 }
 
 .me-option {

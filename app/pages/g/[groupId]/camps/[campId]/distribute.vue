@@ -12,10 +12,19 @@
       <!-- 멤버 -->
       <nav class="panel members-panel" aria-label="멤버">
         <h2 class="panel-title">멤버</h2>
+        <p v-if="isMobile" class="member-hint">멤버를 눌러 장비를 담아 주세요.</p>
         <ul class="member-list">
-          <li v-for="member in members" :key="member.id" class="member-row">
-            <span class="name">{{ member.name }}</span>
-            <span class="badge" :class="{ zero: !assignedCount(member.id) }">{{ assignedCount(member.id) }}</span>
+          <li v-for="member in members" :key="member.id">
+            <!-- 모바일에서만 눌러서 장비를 담는 버튼이고, PC에서는 단순 표시다. -->
+            <component
+              :is="isMobile ? 'button' : 'div'"
+              class="member-row"
+              v-bind="isMobile ? { type: 'button', 'aria-haspopup': 'dialog', onClick: () => openSheet(member.id) } : {}"
+            >
+              <span v-if="isMobile" class="add-mark" aria-hidden="true" />
+              <span class="name">{{ member.name }}</span>
+              <span class="badge" :class="{ zero: !assignedCount(member.id) }">{{ assignedCount(member.id) }}</span>
+            </component>
           </li>
         </ul>
       </nav>
@@ -34,17 +43,15 @@
                     <small class="owner">{{ holderOf(item)?.name }}</small>
                   </span>
                   <div class="stepper">
-                    <button type="button" class="round" aria-label="하나 빼기" @click="subtract(item)">−</button>
+                    <button type="button" class="round minus" aria-label="하나 빼기" @click="subtract(item)" />
                     <span>{{ item.quantity }}</span>
                     <button
                       type="button"
-                      class="round"
+                      class="round plus"
                       aria-label="하나 더"
                       :disabled="!holderOf(item)?.guest && (!ownedOf(item.id) || remaining(ownedOf(item.id)!) < 1)"
                       @click="addAgain(item)"
-                    >
-                      +
-                    </button>
+                    />
                   </div>
                 </li>
               </ul>
@@ -70,8 +77,8 @@
         </div>
       </section>
 
-      <!-- 멤버들이 가진 장비 -->
-      <section class="panel">
+      <!-- 멤버들이 가진 장비. 모바일에서는 멤버를 눌러 여는 시트에서 담는다. -->
+      <section class="panel pool-panel">
         <h2 class="panel-title">멤버들이 가진 장비</h2>
         <p v-if="!pool.length" class="hint">
           등록된 장비가 없어요. <NuxtLink :to="group.path('/gear')">멤버·장비 등록</NuxtLink>에서 추가해 주세요.
@@ -131,13 +138,11 @@
               <span class="qty">남은 {{ remaining(item) }}</span>
               <button
                 type="button"
-                class="round"
+                class="round plus"
                 :disabled="remaining(item) < 1"
                 aria-label="추가"
                 @click="add(item)"
-              >
-                +
-              </button>
+              />
             </li>
           </VueDraggable>
             </div>
@@ -145,6 +150,48 @@
         </div>
       </section>
     </div>
+
+    <!-- 모바일: 멤버를 누르면 아래에서 올라와 그 사람의 장비를 담는다. 배경 비활성·포커스 가두기·Esc는 네이티브 dialog가 맡는다. -->
+    <dialog
+      v-if="isMobile"
+      ref="sheet"
+      class="sheet"
+      :class="{ closing }"
+      :aria-labelledby="sheetTitleId"
+      @cancel.prevent="closeSheet"
+      @close="onSheetClosed"
+      @click.self="closeSheet"
+      @animationend.self="onSheetAnimationEnd"
+    >
+      <div v-if="sheetGroup" class="sheet-panel">
+        <div class="sheet-head">
+          <h2 :id="sheetTitleId" class="sheet-title">
+            {{ sheetGroup.name }}
+            <small>담당 {{ assignedCount(sheetGroup.memberId) }}개</small>
+          </h2>
+          <button class="icon-close" type="button" autofocus aria-label="닫기" @click="closeSheet" />
+        </div>
+        <form v-if="sheetGroup.guest" class="guest-form" @submit.prevent="addGuestGear(sheetGroup.memberId)">
+          <input
+            v-model="guestForm(sheetGroup.memberId).name"
+            class="input"
+            type="text"
+            maxlength="30"
+            placeholder="게스트가 가져올 장비"
+            :aria-label="`${sheetGroup.name} 장비 이름`"
+          />
+          <button class="btn" type="submit" :disabled="!guestForm(sheetGroup.memberId).name.trim()">추가</button>
+        </form>
+        <p v-else-if="!sheetGroup.items.length" class="hint">등록된 장비가 없어요.</p>
+        <ul v-else class="gear-list">
+          <li v-for="item in sheetGroup.items" :key="item.id" class="gear-item" :class="{ 'is-used-up': remaining(item) < 1 }">
+            <span class="gear-name">{{ equipmentLabel.equipmentLabel(item) }}</span>
+            <span class="qty">남은 {{ remaining(item) }}</span>
+            <button type="button" class="round plus" :disabled="remaining(item) < 1" aria-label="추가" @click="add(item)" />
+          </li>
+        </ul>
+      </div>
+    </dialog>
 
     <div class="page-actions">
       <NuxtLink class="btn" :to="group.path(`/camps/${route.params.campId}/members`)">이전</NuxtLink>
@@ -200,6 +247,33 @@ const addGuestGear = (memberId: ID): void => {
 /** 공통으로 챙길 장비: 모든 멤버의 담당 장비를 한 목록으로 모은다. 장비는 주인이 챙긴다. */
 const shared = computed<Equipment[]>(() => members.value.flatMap((m) => m.equipments))
 const sharedGroups = computed(() => groupByCategory.groupByCategory(shared.value))
+
+// 모바일 장비 담기 시트. PC 폭에서는 아예 렌더하지 않는다.
+const isMobile = useIsMobile()
+const sheet = ref<HTMLDialogElement>()
+const sheetTitleId = useId()
+const sheetMemberId = ref<ID>()
+const sheetGroup = computed(() => poolGroups.value.find((g) => g.memberId === sheetMemberId.value))
+const openSheet = async (memberId: ID): Promise<void> => {
+  sheetMemberId.value = memberId
+  await nextTick()
+  sheet.value?.showModal()
+}
+
+// 닫을 때는 아래로 내려간 뒤 dialog를 닫는다. 애니메이션을 줄인 환경에서는 바로 닫는다.
+const closing = ref(false)
+const closeSheet = (): void => {
+  if (!sheet.value?.open || closing.value) return
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) sheet.value.close()
+  else closing.value = true
+}
+const onSheetAnimationEnd = (): void => {
+  if (closing.value) sheet.value?.close()
+}
+const onSheetClosed = (): void => {
+  closing.value = false
+  sheetMemberId.value = undefined
+}
 
 /** 접어 둔 멤버 */
 const folded = ref<ID[]>([])
@@ -312,6 +386,16 @@ const reset = async (): Promise<void> => {
   padding: 0;
   overflow-x: auto;
   list-style: none;
+  // 스와이프로는 넘기되 스크롤바는 숨긴다.
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  > li {
+    flex: none;
+  }
 
   @include pc {
     flex-direction: column;
@@ -324,18 +408,200 @@ const reset = async (): Promise<void> => {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  width: 100%;
   min-height: 40px;
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   white-space: nowrap;
 
+  // 모바일의 누르는 칩
+  &:is(button) {
+    background: var(--color-primary-soft);
+    cursor: pointer;
+    transition:
+      border-color 160ms ease,
+      transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+  }
+
+  // 좁은 PC 칸에서 긴 이름이 칸 밖으로 나가지 않게 줄바꿈한다.
   @include pc {
+    padding: var(--space-2) var(--space-3);
     border-radius: 8px;
+    white-space: normal;
+    text-align: left;
+  }
+}
+
+// 모바일에서는 멤버를 눌러 시트에서 담으므로 긴 보유 장비 목록은 숨긴다.
+.pool-panel {
+  @include mobile {
+    display: none;
+  }
+}
+
+.sheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: 80dvh;
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-md);
+
+  &[open] {
+    animation: sheet-in 280ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  &::backdrop {
+    background: rgb(0 0 0 / 35%);
+  }
+
+  &[open]::backdrop {
+    animation: backdrop-in 280ms ease;
+  }
+
+  &.closing {
+    animation: sheet-out 220ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+
+    &::backdrop {
+      animation: backdrop-out 220ms ease forwards;
+    }
+  }
+}
+
+.sheet-panel {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + var(--safe-bottom));
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sheet-title {
+  margin: 0;
+  font-size: 17px;
+
+  small {
+    margin-left: var(--space-1);
+    color: var(--color-text-muted);
+    font-size: 13px;
+    font-weight: 400;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet[open],
+  .sheet[open]::backdrop {
+    animation: none;
+  }
+}
+
+// 눌러서 장비를 담는 버튼이라는 표시
+// 글자 + 는 폰트에 따라 중심이 어긋나서 막대 두 개로 그린다.
+.add-mark {
+  position: relative;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    background: #fff;
+    border-radius: 1px;
+    transform: translate(-50%, -50%);
+  }
+
+  &::before {
+    width: 10px;
+    height: 2px;
+  }
+
+  &::after {
+    width: 2px;
+    height: 10px;
+  }
+}
+
+.member-row .name {
+  min-width: 0;
+  margin-right: auto;
+  overflow-wrap: anywhere;
+}
+
+.member-hint {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+// 시트 안에서는 카드 대신 구분선으로 장비를 나눈다.
+.sheet .gear-item {
+  min-height: 52px;
+  padding: 0 var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+
+  & + & {
+    margin-top: 0;
+  }
+
+  &:last-child {
+    border-bottom: 0;
   }
 }
 
 .badge {
+  flex: none;
   min-width: 22px;
   padding: 0 6px;
   border-radius: 999px;
@@ -500,6 +766,11 @@ const reset = async (): Promise<void> => {
   }
 }
 
+// 공통 목록은 이름이 두 줄이 돼도 카드가 꽉 차 보이지 않게 위아래 여백을 준다.
+.drop-zone .gear-item {
+  padding: var(--space-2);
+}
+
 .pool-item {
   border: 1px solid var(--color-border);
   cursor: grab;
@@ -535,8 +806,8 @@ const reset = async (): Promise<void> => {
 
 .round {
   flex: none;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 50%;
@@ -550,6 +821,36 @@ const reset = async (): Promise<void> => {
     opacity: 0.4;
     cursor: not-allowed;
   }
+}
+
+// 글자 +, − 는 폰트에 따라 중심이 어긋나서 막대로 그린다.
+.round.plus,
+.round.minus {
+  position: relative;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    background: currentcolor;
+    border-radius: 1px;
+    transform: translate(-50%, -50%);
+  }
+
+  &::before {
+    width: 8px;
+    height: 2px;
+  }
+
+  &::after {
+    width: 2px;
+    height: 8px;
+  }
+}
+
+.round.minus::after {
+  display: none;
 }
 
 .stepper {

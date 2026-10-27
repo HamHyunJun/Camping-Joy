@@ -10,7 +10,11 @@
           <strong>{{ camp.name || '이름 없는 캠핑' }}</strong>
           <span v-if="dday" class="dday" :class="{ past: dday === '지난 캠핑' }">{{ dday }}</span>
         </span>
-        <span class="meta">{{ format.formatDate(camp.date) }} · 멤버 {{ camp.members.length }}명</span>
+        <span class="meta">
+          <span>{{ format.formatDate(camp.date) }}</span>
+          <span class="sep" aria-hidden="true"> · </span>
+          <span>멤버 {{ camp.members.length }}명</span>
+        </span>
         <span class="status">
           <span class="status-label" :class="{ complete: progress.label === '계획 완료' }">
             {{ progress.label }}
@@ -135,9 +139,24 @@ const dateParts = (date: string): { month: string; day: string } => {
   }
 }
 
+// 날짜와 멤버는 각각 한 덩어리로 두어 단어 중간에서 끊기지 않게 한다. 모바일에서는 줄을 나눈다.
 .meta {
   color: var(--color-text-muted);
   font-size: 14px;
+
+  > span:not(.sep) {
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  @include mobile {
+    display: flex;
+    flex-direction: column;
+
+    .sep {
+      display: none;
+    }
+  }
 }
 
 .status {

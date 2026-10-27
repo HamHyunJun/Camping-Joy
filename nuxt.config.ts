@@ -29,6 +29,10 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
   },
+  // 화면 이동 때 브라우저의 View Transition으로 슬라이드 효과를 낸다(assets/scss/main.scss). 지원하지 않는 환경에서는 효과 없이 바로 바뀐다.
+  experimental: {
+    viewTransition: true,
+  },
   app: {
     head: {
       title: 'Camping&Joy',

@@ -177,11 +177,6 @@ onBeforeUnmount(clearPending)
 </script>
 
 <style scoped lang="scss">
-.profile {
-  max-width: 440px;
-  margin: 0 auto;
-}
-
 .avatar-field {
   margin: 0 0 var(--space-4);
   padding: 0;

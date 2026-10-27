@@ -107,6 +107,7 @@ export interface Database {
       delete_group: { Args: { g: string }; Returns: undefined }
       decide_join: { Args: { g: string; u: string; approve: boolean }; Returns: undefined }
       remove_group_member: { Args: { g: string; u: string }; Returns: undefined }
+      transfer_ownership: { Args: { g: string; u: string }; Returns: undefined }
       set_member_role: { Args: { g: string; u: string; new_role: 'admin' | 'member' }; Returns: undefined }
     }
     Enums: Record<never, never>

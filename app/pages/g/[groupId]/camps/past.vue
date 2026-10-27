@@ -1,6 +1,6 @@
 <template>
   <section>
-    <NuxtLink :to="group.path()" class="back-link"><span class="back-icon" aria-hidden="true" />전체 캠핑</NuxtLink>
+    <NuxtLink :to="group.path()" class="back-link pc-only"><span class="back-icon" aria-hidden="true" />전체 캠핑</NuxtLink>
     <h1 class="page-title">지난 캠핑</h1>
     <p class="page-desc">날짜가 지난 캠핑이에요. 최근에 다녀온 캠핑이 먼저 보여요.</p>
 

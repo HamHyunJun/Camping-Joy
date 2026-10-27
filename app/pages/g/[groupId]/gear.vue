@@ -56,6 +56,7 @@
       <div v-if="filteredPeople.length" class="people">
         <PersonGearCard
           v-for="person in filteredPeople"
+          :id="`person-${person.id}`"
           :key="person.id"
           :person="person"
           :initially-open="person.id === lastAddedId || filteredPeople.length === 1"
@@ -125,6 +126,13 @@ const addPerson = (name: string, linkToMe: boolean): void => {
   lastAddedId.value = gear.addPerson(trimmed, linkToMe)?.id
   query.value = ''
   closeAdd()
+  scrollToLastAdded()
+}
+
+/** 새 멤버 카드는 목록 맨 아래에 생기므로, 렌더 후 그 카드로 스크롤을 따라간다. */
+const scrollToLastAdded = async (): Promise<void> => {
+  await nextTick()
+  document.getElementById(`person-${lastAddedId.value}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
 }
 </script>
 
@@ -138,6 +146,16 @@ const addPerson = (name: string, linkToMe: boolean): void => {
 
   .page-title {
     margin-bottom: 0;
+  }
+
+  // 모바일에서는 버튼을 설명 아래 한 줄로 내려 설명이 길게 꺾이지 않게 한다.
+  @include mobile {
+    flex-direction: column;
+    align-items: stretch;
+
+    .btn {
+      width: 100%;
+    }
   }
 
   .btn {

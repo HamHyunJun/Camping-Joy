@@ -1,9 +1,9 @@
 <template>
-  <div class="backdrop" @click.self="emit('close')">
-    <div class="sheet" role="dialog" aria-modal="true" aria-label="결과 공유">
+  <div class="backdrop" :class="{ closing }" @click.self="requestClose">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="결과 공유" @animationend.self="onSheetAnimationEnd">
       <header class="sheet-head">
         <h2>결과 공유</h2>
-        <button class="btn btn-text" type="button" @click="emit('close')">닫기</button>
+        <button class="icon-close" type="button" aria-label="닫기" @click="requestClose" />
       </header>
 
       <div class="tabs" role="tablist">
@@ -91,6 +91,7 @@ const mode = ref<'image' | 'text'>('image')
 const card = ref<HTMLElement>()
 const busy = ref(false)
 const toast = ref('')
+const closing = ref(false)
 /** 안드로이드/iOS 앱(웹뷰) 안인지. 웹뷰는 다운로드 링크와 Web Share를 못 쓰므로 앱 공유 창을 쓴다. */
 const native = Capacitor.isNativePlatform()
 const canShare = native || (typeof navigator !== 'undefined' && typeof navigator.share === 'function')
@@ -206,8 +207,19 @@ const saveText = (): void => {
   download(new Blob([text.value], { type: 'text/plain;charset=utf-8' }), `${fileName.value}.txt`)
 }
 
+// 닫을 때는 퇴장 애니메이션이 끝난 뒤 부모에 알린다. 애니메이션을 줄인 환경에서는 바로 알린다.
+const requestClose = (): void => {
+  if (closing.value) return
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) emit('close')
+  else closing.value = true
+}
+
+const onSheetAnimationEnd = (): void => {
+  if (closing.value) emit('close')
+}
+
 const onKeydown = (event: KeyboardEvent): void => {
-  if (event.key === 'Escape') emit('close')
+  if (event.key === 'Escape') requestClose()
 }
 </script>
 
@@ -221,6 +233,11 @@ const onKeydown = (event: KeyboardEvent): void => {
   justify-content: center;
   padding: var(--space-4);
   background: rgb(16 24 20 / 45%);
+  animation: backdrop-in 200ms ease;
+
+  &.closing {
+    animation: backdrop-out 200ms ease forwards;
+  }
 
   @include mobile {
     align-items: flex-end;
@@ -240,11 +257,66 @@ const onKeydown = (event: KeyboardEvent): void => {
   border-radius: var(--radius);
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
+  animation: pop-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  .closing > & {
+    animation: pop-out 160ms ease forwards;
+  }
 
   @include mobile {
     max-width: none;
     padding-bottom: calc(var(--space-4) + var(--safe-bottom));
     border-radius: var(--radius) var(--radius) 0 0;
+    animation: slide-in 280ms cubic-bezier(0.32, 0.72, 0, 1);
+
+    .closing > & {
+      animation: slide-out 220ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    }
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes slide-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .sheet {
+    animation: none;
   }
 }
 

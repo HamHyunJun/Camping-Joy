@@ -149,11 +149,6 @@ onMounted(() => group.loadGroups())
 </script>
 
 <style scoped lang="scss">
-.groups {
-  max-width: 560px;
-  margin: 0 auto;
-}
-
 .search {
   position: relative;
   display: flex;
@@ -224,6 +219,18 @@ onMounted(() => group.loadGroups())
 
   &:not(.static):active {
     transform: scale(0.98);
+  }
+
+  // 가입 신청 카드는 모바일에서 설명 아래에 버튼(또는 대기 상태)을 둔다.
+  @include mobile {
+    &.static {
+      flex-direction: column;
+      align-items: stretch;
+
+      .btn {
+        width: 100%;
+      }
+    }
   }
 }
 

@@ -2,11 +2,13 @@
   <dialog
     ref="dialog"
     class="modal"
+    :class="{ closing }"
     :role="alert ? 'alertdialog' : 'dialog'"
     :aria-labelledby="titleId"
     :aria-describedby="bodyId"
     @cancel.prevent="emit('cancel')"
     @click.self="emit('cancel')"
+    @animationend.self="onAnimationEnd"
   >
     <form class="panel" @submit.prevent="emit('confirm')">
       <h2 :id="titleId" class="title">{{ title }}</h2>
@@ -35,10 +37,23 @@ const dialog = ref<HTMLDialogElement>()
 const titleId = useId()
 const bodyId = useId()
 
+const closing = ref(false)
+
 // 네이티브 <dialog>가 배경 비활성, 포커스 가두기, Esc를 맡는다.
+// 닫을 때는 퇴장 애니메이션이 끝난 뒤 닫는다. 애니메이션을 줄인 환경에서는 바로 닫는다.
 const sync = (open: boolean): void => {
+  closing.value = false
   if (open && !dialog.value?.open) dialog.value?.showModal()
-  if (!open && dialog.value?.open) dialog.value.close()
+  if (!open && dialog.value?.open) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) dialog.value.close()
+    else closing.value = true
+  }
+}
+
+const onAnimationEnd = (): void => {
+  if (!closing.value) return
+  closing.value = false
+  dialog.value?.close()
 }
 
 onMounted(() => sync(props.open))
@@ -66,6 +81,14 @@ watch(() => props.open, sync, { flush: 'post' })
 
   &[open]::backdrop {
     animation: backdrop-in 160ms ease;
+  }
+
+  &.closing {
+    animation: modal-out 140ms ease forwards;
+
+    &::backdrop {
+      animation: backdrop-out 140ms ease forwards;
+    }
   }
 }
 
@@ -132,8 +155,21 @@ watch(() => props.open, sync, { flush: 'post' })
   }
 }
 
+@keyframes modal-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
 @keyframes backdrop-in {
   from {
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-out {
+  to {
     opacity: 0;
   }
 }

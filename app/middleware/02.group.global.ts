@@ -7,6 +7,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // 서버 설정이 없으면 모임 목록 없이 기기에만 저장하는 하나의 모임으로 쓴다.
   if (to.path === '/' && !useAuthStore().enabled) return navigateTo('/g/local')
   if (typeof groupId !== 'string') {
+    // 모임 목록(/)에서는 돌아갈 모임이 없다.
+    group.lastGroupId = to.path === '/' ? undefined : (group.currentGroupId ?? group.lastGroupId)
     group.currentGroupId = undefined
     return
   }

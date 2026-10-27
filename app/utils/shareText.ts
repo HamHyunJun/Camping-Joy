@@ -49,16 +49,18 @@ export default {
     }
     lines.push('')
     lines.push('🎒 누가 무엇을 챙기나요')
-    for (const member of camp.members) {
+    camp.members.forEach((member, index) => {
+      // 사람마다 한 줄씩 띄워 읽기 쉽게 한다.
+      if (index) lines.push('')
       if (!member.equipments.length) {
         lines.push(`• ${member.name}: 없음`)
-        continue
+        return
       }
       const items = sortByCategory(member.equipments).map((e) =>
         e.quantity > 1 ? `${equipmentLabel.equipmentLabel(e)} ×${e.quantity}` : equipmentLabel.equipmentLabel(e),
       )
       lines.push(`• ${member.name}: ${items.join(', ')}`)
-    }
+    })
     lines.push('')
     lines.push('— Camping&Joy')
     return lines.join('\n')

@@ -11,24 +11,26 @@
       <span class="select-value" :class="{ placeholder: !selected }">{{ selected?.label ?? placeholder }}</span>
       <span class="select-chevron" aria-hidden="true">›</span>
     </button>
-    <ul v-if="open" ref="list" class="select-options" :class="{ up: dropUp }" role="listbox" :aria-label="ariaLabel">
-      <li v-for="option in options" :key="option.value">
-        <button
-          type="button"
-          role="option"
-          class="select-option"
-          :class="{ selected: option.value === modelValue }"
-          :aria-selected="option.value === modelValue"
-          @click="choose(option.value)"
-        >
-          <span class="option-text">
-            {{ option.label }}
-            <small v-if="option.hint">{{ option.hint }}</small>
-          </span>
-          <span v-if="option.value === modelValue" class="option-check" aria-hidden="true">✓</span>
-        </button>
-      </li>
-    </ul>
+    <Transition name="options">
+      <ul v-if="open" ref="list" class="select-options" :class="{ up: dropUp }" role="listbox" :aria-label="ariaLabel">
+        <li v-for="option in options" :key="option.value">
+          <button
+            type="button"
+            role="option"
+            class="select-option"
+            :class="{ selected: option.value === modelValue }"
+            :aria-selected="option.value === modelValue"
+            @click="choose(option.value)"
+          >
+            <span class="option-text">
+              {{ option.label }}
+              <small v-if="option.hint">{{ option.hint }}</small>
+            </span>
+            <span v-if="option.value === modelValue" class="option-check" aria-hidden="true">✓</span>
+          </button>
+        </li>
+      </ul>
+    </Transition>
   </div>
 </template>
 
@@ -101,7 +103,7 @@ const closeOnOutside = (event: PointerEvent): void => {
   justify-content: space-between;
   gap: var(--space-2);
   width: 100%;
-  min-height: 46px;
+  min-height: var(--control-h, 46px);
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -124,6 +126,7 @@ const closeOnOutside = (event: PointerEvent): void => {
 
   &.placeholder {
     color: var(--color-text-subtle);
+    font-size: 13px;
   }
 }
 
@@ -154,10 +157,37 @@ const closeOnOutside = (event: PointerEvent): void => {
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
   list-style: none;
+  transform-origin: top left;
 
   &.up {
     top: auto;
     bottom: calc(100% + 6px);
+    transform-origin: bottom left;
+  }
+}
+
+// 열고 닫을 때 살짝 커지며 나타나고 사라진다.
+.options-enter-active,
+.options-leave-active {
+  transition:
+    opacity 140ms ease,
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.options-enter-from,
+.options-leave-to {
+  opacity: 0;
+  transform: scale(0.96) translateY(-4px);
+
+  &.up {
+    transform: scale(0.96) translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .options-enter-active,
+  .options-leave-active {
+    transition: none;
   }
 }
 

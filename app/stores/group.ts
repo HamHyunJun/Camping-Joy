@@ -12,6 +12,8 @@ interface GroupState {
   /** 구성원의 프로필(닉네임·이미지). 관리자·운영진만 읽을 수 있다. */
   profiles: Record<string, ProfileRow>
   currentGroupId: string | undefined
+  /** 모임 밖(내 정보 등)으로 나가기 직전에 보던 모임. 거기서 모임으로 돌아올 때 쓴다. */
+  lastGroupId: string | undefined
   /** 모임 목록과 내 역할을 서버에서 한 번 읽어 왔는지 */
   loaded: boolean
 }
@@ -24,7 +26,7 @@ export const TAKEN = '이미 있는 모임 이름이에요.'
 
 /** 모임. 모임 하나가 멤버·장비·캠핑 묶음이다. */
 export const useGroupStore = defineStore('group', {
-  state: (): GroupState => ({ groups: [], counts: {}, mine: [], members: [], profiles: {}, currentGroupId: undefined, loaded: false }),
+  state: (): GroupState => ({ groups: [], counts: {}, mine: [], members: [], profiles: {}, currentGroupId: undefined, lastGroupId: undefined, loaded: false }),
   getters: {
     current: (state): GroupRow | undefined => state.groups.find((g) => g.id === state.currentGroupId),
     /** 모임 안의 주소. 예: path('/gear') → /g/모임id/gear */
@@ -134,6 +136,13 @@ export const useGroupStore = defineStore('group', {
       const { error } = (await useSupabase()?.rpc('remove_group_member', { g: this.currentGroupId ?? '', u: userId })) ?? { error: true }
       if (error) return FAILED
       await this.loadMembers()
+      return undefined
+    },
+    /** 관리자를 다른 구성원에게 넘긴다. 나는 운영진이 된다. */
+    async transferOwnership(userId: string): Promise<Failure> {
+      const { error } = (await useSupabase()?.rpc('transfer_ownership', { g: this.currentGroupId ?? '', u: userId })) ?? { error: true }
+      if (error) return FAILED
+      await Promise.all([this.loadGroups(), this.loadMembers()])
       return undefined
     },
     async setRole(userId: string, role: 'admin' | 'member'): Promise<Failure> {

@@ -30,7 +30,7 @@
     </p>
 
     <div v-if="candidates.length" class="candidates">
-      <span class="candidates-label">등록된 사람</span>
+      <span class="candidates-label">등록된 사람 {{ candidates.length }}명</span>
       <button v-for="person in candidates" :key="person.id" class="chip" type="button" @click="addPerson(person)">
         + {{ person.name }}
         <small>장비 {{ person.equipments.length }}</small>
@@ -50,12 +50,14 @@
       <button class="btn" type="submit" :disabled="!guestName.trim()">게스트 추가</button>
     </form>
 
+    <p v-if="members.length" class="member-total">이번 캠핑 멤버 {{ members.length }}명</p>
     <ul v-if="members.length" class="member-list card">
       <li v-for="member in members" :key="member.id" class="member-item">
         <span class="avatar">{{ member.name.slice(0, 1) }}</span>
         <span class="name">{{ member.name }}<small v-if="member.guest" class="guest-tag">게스트</small></span>
-        <span class="count">담당 장비 {{ bringingCount(member) }}개</span>
-        <button class="btn btn-text btn-danger" type="button" @click="remove(member)">빼기</button>
+        <!-- 모바일에서는 이름표처럼 작게 보여 주려고 담당 장비는 있을 때만 숫자로 줄인다. -->
+        <span v-if="!isMobile || bringingCount(member)" class="count">{{ isMobile ? bringingCount(member) : `담당 장비 ${bringingCount(member)}개` }}</span>
+        <button class="btn btn-text btn-danger" type="button" :aria-label="`${member.name} 빼기`" @click="remove(member)">{{ isMobile ? '×' : '빼기' }}</button>
       </li>
     </ul>
     <p v-else class="empty">아직 멤버가 없어요.</p>
@@ -79,6 +81,7 @@ const store = useCampStore()
 const { ask } = useConfirm()
 const gear = useGearStore()
 const route = useRoute()
+const isMobile = useIsMobile()
 
 const newName = ref('')
 const guestName = ref('')
@@ -155,12 +158,20 @@ const reset = async (): Promise<void> => {
   font-size: 12px;
 }
 
+// 등록된 사람이 많아도 화면을 다 차지하지 않게 일정 높이까지만 보이고 안에서 넘긴다.
 .candidates {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+  max-height: 176px;
   margin-top: var(--space-3);
+  padding: var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
 }
 
 .candidates-label {
@@ -170,10 +181,25 @@ const reset = async (): Promise<void> => {
   font-weight: 600;
 }
 
+.member-total {
+  margin: var(--space-4) 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .member-list {
-  margin: var(--space-4) 0 0;
+  margin: 0;
   padding: var(--space-1) var(--space-4);
   list-style: none;
+
+  // 모바일에서는 줄 대신 이름표(칩)로 모아서 많아도 짧게 보이게 한다.
+  @include mobile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
 }
 
 .member-item {
@@ -198,5 +224,44 @@ const reset = async (): Promise<void> => {
 .count {
   color: var(--color-text-muted);
   font-size: 13px;
+}
+
+@include mobile {
+  .member-item {
+    min-height: 36px;
+    padding: 0 var(--space-1) 0 var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface-muted);
+
+    & + & {
+      border-top: 1px solid var(--color-border);
+    }
+
+    .avatar {
+      display: none;
+    }
+
+    .name {
+      flex: none;
+      max-width: 160px;
+    }
+
+    .count {
+      min-width: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .btn-text {
+      min-height: 28px;
+      padding: 0 var(--space-2);
+    }
+  }
 }
 </style>
